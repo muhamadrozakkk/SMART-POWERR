@@ -38,9 +38,9 @@ const partnerLogos = [
   },
 ];
 
-export function PartnerLogos() {
+export function PartnerLogos({ className = "" }: { className?: string }) {
   return (
-    <div className="landing-header-partners" aria-label="Mitra dan identitas pendukung">
+    <div className={`partner-logos ${className}`.trim()} aria-label="Mitra dan identitas pendukung">
       {partnerLogos.map((logo) => (
         <span className={`partner-logo ${logo.className}`} key={logo.src}>
           <Image src={logo.src} alt={logo.alt} width={logo.width} height={logo.height} />

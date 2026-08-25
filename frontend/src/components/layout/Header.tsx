@@ -1,12 +1,33 @@
 "use client";
 
+import { useState } from "react";
 import { Bell, ChevronDown, Menu } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { OnlineBadge } from "@/components/ui/StatusBadge";
 
 export function Header({ onMenu }: { onMenu: () => void }) {
+  const router = useRouter();
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  function handleLogout() {
+    document.cookie = "spw_demo_auth=; path=/; max-age=0";
+    router.push("/");
+  }
+
   return <header className="topbar">
     <button className="mobile-menu" onClick={onMenu} aria-label="Buka menu"><Menu size={22} /></button>
     <div className="greeting"><h1>Selamat pagi, Rozak! <span>👋</span></h1><p>Ringkasan monitoring energi listrik secara real-time</p></div>
-    <div className="topbar-actions"><OnlineBadge /><button className="icon-button notification-button" aria-label="Notifikasi"><Bell size={21} /><span>3</span></button><div className="profile-trigger"><div className="avatar">R</div><div className="profile-copy"><strong>Rozak</strong><span>Admin</span></div><ChevronDown size={17} /></div></div>
+    <div className="topbar-actions">
+      <OnlineBadge />
+      <div className="header-menu-wrap">
+        <button className="icon-button notification-button" aria-label="Notifikasi" aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen(!notificationsOpen); setProfileOpen(false); }}><Bell size={21} /><span>3</span></button>
+        {notificationsOpen ? <div className="header-popover notification-popover"><strong>Notifikasi</strong><span>3 ringkasan monitoring siap dilihat.</span><button onClick={() => setNotificationsOpen(false)}>Tutup</button></div> : null}
+      </div>
+      <div className="header-menu-wrap">
+        <button className="profile-trigger" aria-label="Buka menu profil" aria-expanded={profileOpen} onClick={() => { setProfileOpen(!profileOpen); setNotificationsOpen(false); }}><div className="avatar">R</div><div className="profile-copy"><strong>Rozak</strong><span>Admin</span></div><ChevronDown size={17} /></button>
+        {profileOpen ? <div className="header-popover profile-popover"><button onClick={() => router.push("/profil")}>Profil saya</button><button onClick={handleLogout}>Keluar</button></div> : null}
+      </div>
+    </div>
   </header>;
 }

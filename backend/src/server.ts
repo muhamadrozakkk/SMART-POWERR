@@ -1,6 +1,6 @@
 import cors from "cors";
 import express, { type Request, type Response } from "express";
-import { alarms, deviceStatus, distribution, prediction, powerHistory, settings } from "./mockData.js";
+import { alarms, contactMessages, deviceStatus, distribution, prediction, powerHistory, settings } from "./mockData.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
@@ -11,6 +11,14 @@ app.use(express.json());
 
 app.get("/api/health", (_request: Request, response: Response) => {
   response.json({ status: "ok", service: "smart-power-api", mode: "mock", timestamp: new Date().toISOString() });
+});
+
+app.post("/api/auth/login", (request: Request, response: Response) => {
+  const body = request.body as { email?: unknown; password?: unknown };
+  if (typeof body.email !== "string" || typeof body.password !== "string" || !body.email || !body.password) {
+    return response.status(400).json({ error: "Email dan password wajib diisi" });
+  }
+  return response.json({ user: { name: "Rozak", email: body.email, role: "Admin" }, token: "demo-session-token", simulation: true });
 });
 
 app.get("/api/dashboard", (_request: Request, response: Response) => {
@@ -51,6 +59,16 @@ app.patch("/api/settings", (request: Request, response: Response) => {
   if (body.monitoringIntervalSeconds !== undefined && (![5, 10, 30].includes(body.monitoringIntervalSeconds))) return response.status(400).json({ error: "monitoringIntervalSeconds harus 5, 10, atau 30" });
   Object.assign(settings, body);
   return response.json({ data: settings, persistent: false });
+});
+
+app.post("/api/contact", (request: Request, response: Response) => {
+  const body = request.body as Partial<{ name: string; email: string; subject: string; message: string }>;
+  if (![body.name, body.email, body.subject, body.message].every((value) => typeof value === "string" && value.trim())) {
+    return response.status(400).json({ error: "Nama, email, subjek, dan pesan wajib diisi" });
+  }
+  const message = { id: contactMessages.length + 1, name: body.name!.trim(), email: body.email!.trim(), subject: body.subject!.trim(), message: body.message!.trim(), createdAt: new Date().toISOString() };
+  contactMessages.push(message);
+  return response.status(201).json({ data: message, message: "Pesan berhasil diterima", simulation: true });
 });
 
 app.use((_request: Request, response: Response) => response.status(404).json({ error: "Endpoint tidak ditemukan" }));

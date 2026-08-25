@@ -75,3 +75,14 @@ export const settings = {
   highUsageNotifications: true,
   dailySummary: true,
 };
+
+export interface ContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  createdAt: string;
+}
+
+export const contactMessages: ContactMessage[] = [];

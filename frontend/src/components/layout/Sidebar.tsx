@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Activity, Bell, Bolt, CircleUserRound, Clock3, DoorOpen, Gauge, LayoutGrid, Settings, WalletCards, X, Zap } from "lucide-react";
+import { PartnerLogos } from "@/components/landing/PartnerLogos";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
@@ -18,17 +19,23 @@ const navItems = [
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+  function handleLogout() {
+    document.cookie = "spw_demo_auth=; path=/; max-age=0";
+    onClose();
+    router.push("/");
+  }
   return <>
     <div className={`sidebar-backdrop ${open ? "visible" : ""}`} onClick={onClose} />
     <aside className={`app-sidebar ${open ? "open" : ""}`}>
-      <div className="sidebar-brand"><div className="brand-mark"><Zap size={27} fill="currentColor" /></div><div><strong>SMART<br />POWER WEB</strong><span>Energy Monitoring System</span></div><button className="sidebar-close" onClick={onClose} aria-label="Tutup menu"><X size={20} /></button></div>
+      <div className="sidebar-brand"><div className="brand-mark"><Zap size={27} fill="currentColor" /></div><div className="sidebar-brand-copy"><strong>SMART<br />POWER WEB</strong><span>Energy Monitoring System</span><PartnerLogos className="sidebar-partners" /></div><button className="sidebar-close" onClick={onClose} aria-label="Tutup menu"><X size={20} /></button></div>
       <nav className="sidebar-nav">{navItems.map(({ label, href, icon: Icon }) => {
         const active = href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
         return <Link key={href} href={href} className={active ? "active" : ""} onClick={onClose}><Icon size={21} strokeWidth={1.8} /><span>{label}</span></Link>;
       })}</nav>
       <div className="sidebar-bottom">
         <div className="connection-card"><div className="connection-title"><span className="status-dot" />Perangkat Online</div><p>Terhubung ke Smart Power Web</p><div className="connection-line" /><span>Terakhir Update</span><strong>10:30:45 WIB</strong><span>24 Mei 2025</span></div>
-        <button className="logout-button"><DoorOpen size={20} />Logout</button>
+        <button className="logout-button" onClick={handleLogout}><DoorOpen size={20} />Logout</button>
       </div>
     </aside>
   </>;
