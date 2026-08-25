@@ -1,14 +1,13 @@
-import { costSummaries, energyMetrics } from "@/data/dummyData";
-import { AlarmStatus } from "@/components/dashboard/AlarmStatus";
-import { CostSummary } from "@/components/dashboard/CostSummary";
-import { DataHistory } from "@/components/dashboard/DataHistory";
-import { DeviceStatus } from "@/components/dashboard/DeviceStatus";
-import { EnergyDistribution } from "@/components/dashboard/EnergyDistribution";
-import { EnergyPrediction } from "@/components/dashboard/EnergyPrediction";
-import { EnergySummary } from "@/components/dashboard/EnergySummary";
-import { MetricCard } from "@/components/dashboard/MetricCard";
-import { PowerChart } from "@/components/dashboard/PowerChart";
+import Link from "next/link";
+import { ArrowRight, BarChart3, Bolt, CheckCircle2, CircleDollarSign, Gauge, ShieldCheck } from "lucide-react";
+import { LandingPreview } from "@/components/landing/LandingPreview";
 
-export default function DashboardPage() {
-  return <div className="dashboard-grid"><div className="metrics-row">{energyMetrics.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</div><PowerChart /><EnergyDistribution /><div className="summary-row"><EnergySummary /><CostSummary summary={costSummaries[0]} /><CostSummary summary={costSummaries[1]} /><DeviceStatus /><AlarmStatus /></div><DataHistory /><EnergyPrediction /></div>;
+const featureCards = [
+  { icon: Bolt, tone: "blue", title: "Monitoring Real-time", copy: "Pantau penggunaan listrik secara langsung dengan data akurat dan update berkala." },
+  { icon: BarChart3, tone: "green", title: "Analisis Mendalam", copy: "Lihat pola konsumsi energi melalui grafik yang mudah dipahami." },
+  { icon: CircleDollarSign, tone: "amber", title: "Estimasi Biaya", copy: "Dapatkan estimasi biaya listrik dan kelola anggaran energi dengan lebih baik." },
+];
+
+export default function LandingPage() {
+  return <div className="landing-page"><header className="landing-header"><Link href="/" className="landing-brand"><span className="landing-brand-mark"><Bolt size={23} fill="currentColor" /></span><span>SMART <em>POWER</em> WEB</span></Link><nav className="landing-nav" aria-label="Navigasi utama"><a href="#beranda">Beranda</a><a href="#fitur">Fitur</a><a href="#tentang">Tentang</a><a href="#kontak">Kontak</a></nav><Link href="/login" className="landing-login"><ShieldCheck size={16} />Masuk</Link></header><main><section className="landing-hero" id="beranda"><div className="hero-copy"><div className="hero-eyebrow"><Bolt size={14} fill="currentColor" />Sistem Manajemen Energi Listrik</div><h1>Kelola Energi,<br /><span>Kendalikan Biaya</span></h1><p>Pantau penggunaan listrik rumah Anda secara real-time, pahami pola konsumsi, dan hemat biaya dengan <strong>SMART POWER WEB.</strong></p><div className="hero-actions"><Link href="/login" className="hero-primary">Mulai Sekarang <ArrowRight size={18} /></Link><a href="#fitur" className="hero-secondary">Pelajari Lebih Lanjut <span>⌄</span></a></div><div className="hero-benefits"><span><CheckCircle2 size={16} />Real-time Monitoring</span><span><ShieldCheck size={16} />Data Akurat</span><span><Gauge size={16} />Mudah Digunakan</span></div></div><LandingPreview /></section><section className="feature-section" id="fitur"><div className="feature-intro"><span className="section-kicker">FITUR UTAMA</span><h2>Semua yang Anda <span>Butuhkan</span></h2><p>Fitur lengkap untuk membantu Anda mengelola penggunaan energi listrik dengan lebih efektif.</p></div><div className="feature-grid">{featureCards.map(({ icon: Icon, tone, title, copy }) => <article className="feature-card" key={title}><div className={`feature-icon ${tone}`}><Icon size={22} /></div><h3>{title}</h3><p>{copy}</p></article>)}</div></section><section className="landing-stats" id="tentang"><div><BarChart3 size={22} /><strong>500+</strong><span>Pengguna Aktif</span></div><div><Bolt size={22} /><strong>1.2M+</strong><span>Data Terkumpul</span></div><div><Gauge size={22} /><strong>98.5%</strong><span>Akurasi Data</span></div><div><ShieldCheck size={22} /><strong>24/7</strong><span>Monitoring</span></div></section></main><footer className="landing-footer" id="kontak">© 2026 SMART POWER WEB. All rights reserved.</footer></div>;
 }
