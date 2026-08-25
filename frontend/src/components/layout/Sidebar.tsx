@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Activity, Bell, Bolt, CircleUserRound, Clock3, DoorOpen, Gauge, LayoutGrid, Settings, WalletCards, X, Zap } from "lucide-react";
 
 const navItems = [
-  { label: "Dashboard", href: "/", icon: LayoutGrid },
+  { label: "Dashboard", href: "/dashboard", icon: LayoutGrid },
   { label: "Real-time", href: "/monitoring", icon: Activity },
   { label: "Riwayat Data", href: "/riwayat", icon: Clock3 },
   { label: "Energi", href: "/energi", icon: Bolt },
@@ -23,7 +23,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
     <aside className={`app-sidebar ${open ? "open" : ""}`}>
       <div className="sidebar-brand"><div className="brand-mark"><Zap size={27} fill="currentColor" /></div><div><strong>SMART<br />POWER WEB</strong><span>Energy Monitoring System</span></div><button className="sidebar-close" onClick={onClose} aria-label="Tutup menu"><X size={20} /></button></div>
       <nav className="sidebar-nav">{navItems.map(({ label, href, icon: Icon }) => {
-        const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+        const active = href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
         return <Link key={href} href={href} className={active ? "active" : ""} onClick={onClose}><Icon size={21} strokeWidth={1.8} /><span>{label}</span></Link>;
       })}</nav>
       <div className="sidebar-bottom">
