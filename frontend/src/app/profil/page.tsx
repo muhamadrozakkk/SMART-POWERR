@@ -1,0 +1,8 @@
+import { CircleUserRound, Mail, ShieldCheck, Smartphone } from "lucide-react";
+import { PageHeader } from "@/components/common/PageHeader";
+import { SectionCard } from "@/components/ui/SectionCard";
+import { OnlineBadge } from "@/components/ui/StatusBadge";
+
+export default function ProfilePage() {
+  return <><PageHeader title="Profil" description="Informasi akun dan perangkat yang terhubung." action={<button className="secondary-button">Edit profil</button>} /><div className="two-column"><SectionCard title="Informasi pengguna"><div className="data-highlight"><div className="avatar" style={{ width: 58, height: 58, fontSize: 23 }}>R</div><div style={{ flex: 1 }}><span>Nama pengguna</span><strong>Rozak</strong><span>Pemilik Smart Power Web</span></div></div><div className="info-list"><div className="info-row"><span><Mail size={16} style={{ verticalAlign: "middle", marginRight: 8 }} />Email</span><strong>rozak@example.com</strong></div><div className="info-row"><span><ShieldCheck size={16} style={{ verticalAlign: "middle", marginRight: 8 }} />Role</span><strong>Admin</strong></div><div className="info-row"><span><CircleUserRound size={16} style={{ verticalAlign: "middle", marginRight: 8 }} />Status akun</span><OnlineBadge>Aktif</OnlineBadge></div></div></SectionCard><SectionCard title="Perangkat terhubung"><div className="data-highlight"><div><span>Perangkat utama</span><strong>Smart Power Web</strong><span>ESP32-001</span></div><Smartphone color="#43adff" size={30} /></div><div className="info-row"><span>Jumlah perangkat</span><strong>1 perangkat</strong></div><div className="info-row"><span>Koneksi terakhir</span><strong>10:30:45 WIB</strong></div></SectionCard></div></>;
+}
