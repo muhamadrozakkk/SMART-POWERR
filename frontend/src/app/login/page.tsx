@@ -19,7 +19,8 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      await apiRequest("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+      const result = await apiRequest<{ token?: string }>("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
+      if (result.token) window.localStorage.setItem("spw_access_token", result.token);
     } catch {
       // The frontend remains usable in demo mode when the separate backend is not deployed.
     } finally {

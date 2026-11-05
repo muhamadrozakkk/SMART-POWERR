@@ -12,6 +12,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
 
   function handleLogout() {
     document.cookie = "spw_demo_auth=; path=/; max-age=0";
+    window.localStorage.removeItem("spw_access_token");
     router.push("/");
   }
 

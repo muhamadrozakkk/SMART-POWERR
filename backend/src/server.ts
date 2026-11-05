@@ -1,80 +1,72 @@
-import cors from "cors";
 import express, { type Request, type Response } from "express";
-import { alarms, contactMessages, deviceStatus, distribution, prediction, powerHistory, settings } from "./mockData.js";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import { env } from "./config/env.js";
+import { pool, query } from "./db/pool.js";
+import { errorHandler, notFound } from "./middleware/errors.js";
+import { authRoutes } from "./routes/authRoutes.js";
+import { readingRoutes } from "./routes/readingRoutes.js";
+import { costRoutes } from "./routes/costRoutes.js";
+import { settingsRoutes } from "./routes/settingsRoutes.js";
+import { notificationRoutes } from "./routes/notificationRoutes.js";
+import { deviceRoutes } from "./routes/deviceRoutes.js";
+import { requireAuth, userId } from "./middleware/auth.js";
+import { costSummary } from "./services/costService.js";
+import { deviceStatus, resolveDeviceForUser } from "./services/deviceService.js";
+import { listNotifications } from "./services/notificationService.js";
+import { latestReading, readings } from "./services/readingService.js";
+import { checkOfflineDevices } from "./services/notificationService.js";
 
-const app = express();
-const port = Number(process.env.PORT ?? 4000);
-const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3000";
+export const app = express();
+app.disable("x-powered-by");
+app.use(helmet());
+app.use(cors({ origin: (origin, callback) => { if (!origin || env.corsOrigins.includes(origin)) return callback(null, true); return callback(new Error("Origin tidak diizinkan oleh CORS")); }, credentials: true }));
+app.use(express.json({ limit: "32kb" }));
 
-app.use(cors({ origin: frontendUrl, credentials: true }));
-app.use(express.json());
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false, message: { error: "Terlalu banyak percobaan login. Coba lagi nanti." } });
+async function healthHandler(_request: Request, response: Response) {
+  if (!pool) return response.status(503).json({ status: "degraded", database: "not_configured", service: "smart-power-api" });
+  try { await query("SELECT 1"); return response.json({ status: "ok", database: "connected", service: "smart-power-api", timestamp: new Date().toISOString() }); } catch { return response.status(503).json({ status: "degraded", database: "unavailable", service: "smart-power-api" }); }
+}
+app.get("/health", healthHandler);
+app.get("/api/health", healthHandler);
 
-app.get("/api/health", (_request: Request, response: Response) => {
-  response.json({ status: "ok", service: "smart-power-api", mode: "mock", timestamp: new Date().toISOString() });
+app.use("/api/auth", loginLimiter, authRoutes);
+app.use("/api/readings", readingRoutes);
+app.use("/api/cost", costRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/devices", deviceRoutes);
+
+app.get("/api/dashboard", requireAuth, async (request, response, next) => {
+  try {
+    const deviceId = await resolveDeviceForUser(userId(request));
+    const history = await readings(deviceId);
+    const latest = history.at(-1) ?? await latestReading(deviceId);
+    const costs = await costSummary(userId(request), deviceId);
+    const device = await deviceStatus(deviceId);
+    const notifications = await listNotifications(userId(request));
+    response.json({ metrics: { activePower: { value: latest.power, unit: "W", status: latest.power > 1500 ? "Melebihi batas" : "Penggunaan Normal" }, current: { value: latest.current, unit: "A", status: "Penggunaan Normal" }, voltage: { value: latest.voltage, unit: "V", status: "Stabil" }, powerFactor: { value: latest.power_factor, unit: "", status: "Baik" }, todayEnergy: { value: costs.today.energy_kwh, unit: "kWh", cost: costs.today.cost_rp } }, powerHistory: history.map((row) => ({ time: row.timestamp, power: row.power, energy: row.energy, current: row.current, voltage: row.voltage })), distribution: [], device, alarms: notifications, prediction: [], simulation: false });
+  } catch (error) { next(error); }
 });
 
-app.post("/api/auth/login", (request: Request, response: Response) => {
-  const body = request.body as { email?: unknown; password?: unknown };
-  if (typeof body.email !== "string" || typeof body.password !== "string" || !body.email || !body.password) {
-    return response.status(400).json({ error: "Email dan password wajib diisi" });
-  }
-  return response.json({ user: { name: "Rozak", email: body.email, role: "Admin" }, token: "demo-session-token", simulation: true });
+app.get("/api/device", requireAuth, async (request, response, next) => { try { response.json({ data: await deviceStatus(await resolveDeviceForUser(userId(request))), simulation: false }); } catch (error) { next(error); } });
+app.get("/api/alarms", requireAuth, async (request, response, next) => { try { const data = await listNotifications(userId(request)); response.json({ data, total: data.length, simulation: false }); } catch (error) { next(error); } });
+app.get("/api/prediction", requireAuth, async (request, response, next) => { try { const summary = await costSummary(userId(request)); response.json({ data: [], unit: "kWh / hari", summary, simulation: false }); } catch (error) { next(error); } });
+app.get("/api/energy/distribution", requireAuth, (_request, response) => response.json({ data: [], simulation: false }));
+
+app.post("/api/contact", (request, response) => {
+  const body = request.body as Record<string, unknown>;
+  const valid = ["name", "email", "subject", "message"].every((key) => typeof body[key] === "string" && String(body[key]).trim());
+  if (!valid) return response.status(400).json({ error: "Nama, email, subjek, dan pesan wajib diisi" });
+  console.info(`Pesan kontak diterima dari ${String(body.email).trim()}`);
+  return response.status(201).json({ ok: true, message: "Pesan berhasil diterima" });
 });
 
-app.get("/api/dashboard", (_request: Request, response: Response) => {
-  const latest = powerHistory[powerHistory.length - 1];
-  response.json({
-    metrics: {
-      activePower: { value: latest.power, unit: "W", status: "Penggunaan Normal" },
-      current: { value: latest.current, unit: "A", status: "Penggunaan Normal" },
-      voltage: { value: latest.voltage, unit: "V", status: "Stabil" },
-      powerFactor: { value: 0.94, unit: "", status: "Baik" },
-      todayEnergy: { value: 8.42, unit: "kWh", cost: 5640 },
-    },
-    powerHistory,
-    distribution,
-    device: deviceStatus,
-    alarms,
-    prediction,
-    simulation: true,
-  });
-});
+app.use(notFound);
+app.use(errorHandler);
 
-app.get("/api/readings", (request: Request, response: Response) => {
-  const requestedLimit = Number(request.query.limit ?? powerHistory.length);
-  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.floor(requestedLimit), 1), powerHistory.length) : powerHistory.length;
-  response.json({ data: powerHistory.slice(-limit), total: powerHistory.length, simulation: true });
-});
-
-app.get("/api/device", (_request: Request, response: Response) => response.json({ data: deviceStatus, simulation: true }));
-app.get("/api/alarms", (_request: Request, response: Response) => response.json({ data: alarms, total: alarms.length, simulation: true }));
-app.get("/api/prediction", (_request: Request, response: Response) => response.json({ data: prediction, unit: "kWh / hari", simulation: true }));
-app.get("/api/energy/distribution", (_request: Request, response: Response) => response.json({ data: distribution, simulation: true }));
-
-app.get("/api/settings", (_request: Request, response: Response) => response.json({ data: settings, persistent: false }));
-app.patch("/api/settings", (request: Request, response: Response) => {
-  const body = request.body as Partial<typeof settings>;
-  if (body.powerLimit !== undefined && (!Number.isFinite(body.powerLimit) || body.powerLimit <= 0)) return response.status(400).json({ error: "powerLimit harus berupa angka positif" });
-  if (body.monthlyCostTarget !== undefined && (!Number.isFinite(body.monthlyCostTarget) || body.monthlyCostTarget <= 0)) return response.status(400).json({ error: "monthlyCostTarget harus berupa angka positif" });
-  if (body.monitoringIntervalSeconds !== undefined && (![5, 10, 30].includes(body.monitoringIntervalSeconds))) return response.status(400).json({ error: "monitoringIntervalSeconds harus 5, 10, atau 30" });
-  Object.assign(settings, body);
-  return response.json({ data: settings, persistent: false });
-});
-
-app.post("/api/contact", (request: Request, response: Response) => {
-  const body = request.body as Partial<{ name: string; email: string; subject: string; message: string }>;
-  if (![body.name, body.email, body.subject, body.message].every((value) => typeof value === "string" && value.trim())) {
-    return response.status(400).json({ error: "Nama, email, subjek, dan pesan wajib diisi" });
-  }
-  const message = { id: contactMessages.length + 1, name: body.name!.trim(), email: body.email!.trim(), subject: body.subject!.trim(), message: body.message!.trim(), createdAt: new Date().toISOString() };
-  contactMessages.push(message);
-  return response.status(201).json({ data: message, message: "Pesan berhasil diterima", simulation: true });
-});
-
-app.use((_request: Request, response: Response) => response.status(404).json({ error: "Endpoint tidak ditemukan" }));
-app.use((error: unknown, _request: Request, response: Response, _next: unknown) => {
-  console.error(error);
-  response.status(500).json({ error: "Terjadi kesalahan pada server" });
-});
-
-app.listen(port, () => console.log(`SMART POWER API berjalan di http://localhost:${port} (${frontendUrl})`));
+const server = app.listen(env.port, () => console.log(`SMART POWER API berjalan di http://localhost:${env.port} (${env.timezone})`));
+if (pool) { const timer = setInterval(() => { checkOfflineDevices().catch((error) => console.error("Pengecekan offline gagal", error)); }, 30_000); timer.unref(); }
+export default server;

@@ -22,6 +22,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
   const router = useRouter();
   function handleLogout() {
     document.cookie = "spw_demo_auth=; path=/; max-age=0";
+    window.localStorage.removeItem("spw_access_token");
     onClose();
     router.push("/");
   }
