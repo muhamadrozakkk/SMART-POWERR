@@ -9,8 +9,8 @@ export function middleware(request: NextRequest) {
 
   if (requiresLogin && !isAuthenticated) {
     const landingUrl = request.nextUrl.clone();
-    landingUrl.pathname = "/";
-    landingUrl.search = "";
+    landingUrl.pathname = "/login";
+    landingUrl.search = "?message=Silakan masuk untuk membuka dashboard.";
     return NextResponse.redirect(landingUrl);
   }
 

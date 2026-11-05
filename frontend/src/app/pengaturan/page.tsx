@@ -1,50 +1,15 @@
 "use client";
-
 import { useEffect, useState } from "react";
-import { Bell, Save, SlidersHorizontal } from "lucide-react";
-import { apiRequest } from "@/lib/api";
+import { Save } from "lucide-react";
+import { apiRequest, type Settings } from "@/lib/api";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
 
-type SettingsState = {
-  powerLimit: number;
-  monthlyCostTarget: number;
-  monitoringIntervalSeconds: number;
-  highUsageNotifications: boolean;
-  dailySummary: boolean;
-};
-
-const defaults: SettingsState = { powerLimit: 1500, monthlyCostTarget: 250000, monitoringIntervalSeconds: 5, highUsageNotifications: true, dailySummary: true };
-
+const defaults: Settings = { device_id: "ESP32-001", tariff_class: "CUSTOM", tariff_per_kwh: 0, power_limit_w: 1500, daily_cost_limit_rp: 250000 };
 export default function SettingsPage() {
-  const [values, setValues] = useState<SettingsState>(defaults);
-  const [status, setStatus] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [apiConnected, setApiConnected] = useState(false);
-
-  useEffect(() => {
-    apiRequest<{ data: SettingsState }>("/api/settings").then((payload) => { setValues(payload.data); setApiConnected(true); }).catch(() => { setApiConnected(false); setStatus("Backend belum terhubung — memakai pengaturan lokal."); });
-  }, []);
-
-  function updateValue<Key extends keyof SettingsState>(key: Key, value: SettingsState[Key]) {
-    setValues((current) => ({ ...current, [key]: value }));
-    setStatus("");
-  }
-
-  async function handleSave() {
-    setSaving(true);
-    try {
-      const payload = await apiRequest<{ data: SettingsState }>("/api/settings", { method: "PATCH", body: JSON.stringify(values) });
-      setValues(payload.data);
-      setApiConnected(true);
-      setStatus("Perubahan tersimpan ke backend.");
-    } catch {
-      setApiConnected(false);
-      setStatus("Perubahan tersimpan di sesi ini. Hubungkan NEXT_PUBLIC_API_URL untuk penyimpanan backend.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return <><PageHeader title="Pengaturan" description="Sesuaikan batas penggunaan dan preferensi notifikasi Anda." action={<button className="primary-button" onClick={handleSave} disabled={saving}><Save size={15} />{saving ? "Menyimpan..." : status.startsWith("Perubahan") ? "Tersimpan" : "Simpan perubahan"}</button>} />{status ? <p className="settings-status">{status}</p> : null}<div className="two-column"><SectionCard title="Batas penggunaan"><div className="form-grid"><div className="form-field"><label htmlFor="limit">Batas daya konsumsi</label><input id="limit" type="number" value={values.powerLimit} onChange={(event) => updateValue("powerLimit", Number(event.target.value))} /><small className="muted">Watt</small></div><div className="form-field"><label htmlFor="target">Target biaya bulanan</label><input id="target" type="number" value={values.monthlyCostTarget} onChange={(event) => updateValue("monthlyCostTarget", Number(event.target.value))} /><small className="muted">Rupiah</small></div><div className="form-field"><label htmlFor="interval">Interval monitoring</label><select id="interval" value={values.monitoringIntervalSeconds} onChange={(event) => updateValue("monitoringIntervalSeconds", Number(event.target.value))}><option value={5}>5 detik</option><option value={10}>10 detik</option><option value={30}>30 detik</option></select></div></div></SectionCard><SectionCard title="Preferensi notifikasi"><div className="toggle-row"><span><Bell size={16} style={{ verticalAlign: "middle", marginRight: 8 }} />Notifikasi penggunaan tinggi</span><button className={`toggle ${values.highUsageNotifications ? "on" : ""}`} onClick={() => updateValue("highUsageNotifications", !values.highUsageNotifications)} aria-label="Toggle notifikasi" /></div><div className="toggle-row"><span><SlidersHorizontal size={16} style={{ verticalAlign: "middle", marginRight: 8 }} />Ringkasan harian</span><button className={`toggle ${values.dailySummary ? "on" : ""}`} onClick={() => updateValue("dailySummary", !values.dailySummary)} aria-label="Toggle ringkasan harian" /></div><p className="muted" style={{ fontSize: 12, lineHeight: 1.5 }}>Pengaturan dapat disimpan ke endpoint backend dan tetap memiliki fallback lokal.</p></SectionCard></div><SectionCard title="Informasi integrasi" className="data-panel"><div className="info-list"><div className="info-row"><span>Sumber data saat ini</span><strong>Mock data</strong></div><div className="info-row"><span>Backend API</span><strong style={{ color: apiConnected ? "#34dc6c" : "#ffc13c" }}>{apiConnected ? "Tersedia" : "Belum terhubung"}</strong></div><div className="info-row"><span>Integrasi ESP32</span><strong style={{ color: "#ffc13c" }}>Tahap desain</strong></div></div></SectionCard></>;
+  const [values, setValues] = useState(defaults); const [status, setStatus] = useState(""); const [saving, setSaving] = useState(false); const [connected, setConnected] = useState(false);
+  useEffect(() => { void apiRequest<Settings>("/api/settings").then((data) => { setValues(data); setConnected(true); }).catch(() => setStatus("Backend belum terhubung — periksa konfigurasi API.")); }, []);
+  function update<Key extends keyof Settings>(key: Key, value: Settings[Key]) { setValues((current) => ({ ...current, [key]: value })); setStatus(""); }
+  async function save() { setSaving(true); try { setValues(await apiRequest<Settings>("/api/settings", { method: "PUT", body: JSON.stringify(values) })); setConnected(true); setStatus("Pengaturan berhasil disimpan."); } catch (error) { setStatus(error instanceof Error ? error.message : "Pengaturan gagal disimpan."); } finally { setSaving(false); } }
+  return <><PageHeader title="Pengaturan" description="Sesuaikan tarif dan batas penggunaan perangkat." action={<button className="primary-button" onClick={save} disabled={saving}><Save size={15} />{saving ? "Menyimpan..." : "Simpan perubahan"}</button>} />{status ? <p className="settings-status">{status}</p> : null}<div className="two-column"><SectionCard title="Tarif dan batas penggunaan"><div className="form-grid"><div className="form-field"><label htmlFor="tariff">Golongan tarif</label><select id="tariff" value={values.tariff_class} onChange={(event) => update("tariff_class", event.target.value)}><option value="CUSTOM">CUSTOM</option><option value="R1_900VA">R1 900 VA</option><option value="R1_1300VA">R1 1300 VA</option><option value="R1_2200VA">R1 2200 VA</option></select></div><div className="form-field"><label htmlFor="tariffValue">Tarif per kWh</label><input id="tariffValue" type="number" value={values.tariff_per_kwh} onChange={(event) => update("tariff_per_kwh", Number(event.target.value))} /><small className="muted">Rupiah/kWh</small></div><div className="form-field"><label htmlFor="limit">Batas daya</label><input id="limit" type="number" value={values.power_limit_w} onChange={(event) => update("power_limit_w", Number(event.target.value))} /><small className="muted">Watt</small></div><div className="form-field"><label htmlFor="dailyLimit">Batas biaya harian</label><input id="dailyLimit" type="number" value={values.daily_cost_limit_rp} onChange={(event) => update("daily_cost_limit_rp", Number(event.target.value))} /><small className="muted">Rupiah</small></div></div></SectionCard><SectionCard title="Status integrasi"><div className="info-list"><div className="info-row"><span>Sumber data</span><strong>{connected ? "Backend API" : "Belum terhubung"}</strong></div><div className="info-row"><span>Polling dashboard</span><strong>5 detik</strong></div><div className="info-row"><span>Sensor</span><strong>PZEM-004T</strong></div></div></SectionCard></div></>;
 }
