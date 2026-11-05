@@ -23,7 +23,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
       <OnlineBadge />
       <div className="header-menu-wrap">
         <button className="icon-button notification-button" aria-label="Notifikasi" aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen(!notificationsOpen); setProfileOpen(false); }}><Bell size={21} /><span>3</span></button>
-        {notificationsOpen ? <div className="header-popover notification-popover"><strong>Notifikasi</strong><span>3 ringkasan monitoring siap dilihat.</span><button onClick={() => setNotificationsOpen(false)}>Tutup</button></div> : null}
+        {notificationsOpen ? <div className="header-popover notification-popover"><strong>Notifikasi Sistem</strong><div className="notification-item"><span className="notification-dot warning" /><div><b>Batas daya aman</b><small>Pemakaian masih dalam batas normal.</small></div></div><div className="notification-item"><span className="notification-dot online" /><div><b>Perangkat terhubung</b><small>ESP32-001 mengirim data terbaru.</small></div></div><button onClick={() => setNotificationsOpen(false)}>Tutup</button></div> : null}
       </div>
       <div className="header-menu-wrap">
         <button className="profile-trigger" aria-label="Buka menu profil" aria-expanded={profileOpen} onClick={() => { setProfileOpen(!profileOpen); setNotificationsOpen(false); }}><div className="avatar">R</div><div className="profile-copy"><strong>Rozak</strong><span>Admin</span></div><ChevronDown size={17} /></button>
