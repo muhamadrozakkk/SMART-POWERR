@@ -8,8 +8,9 @@ export type ApiNotification = { id: number; device_id: string; type: "power_limi
 export type ApiDeviceStatus = { device_id: string; name: string; is_online: boolean; last_seen: string | null };
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000").replace(/\/$/, "");
-// Deployment tetap bisa dibuka sebelum URL Railway dipasang. Set false secara eksplisit untuk API nyata.
-const useMock = process.env.NEXT_PUBLIC_USE_MOCK !== "false";
+const hasConfiguredApi = Boolean(process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL);
+// URL API yang diisi berarti gunakan backend nyata. Mock bisa dipaksa lewat NEXT_PUBLIC_USE_MOCK=true.
+const useMock = process.env.NEXT_PUBLIC_USE_MOCK === "true" || (!hasConfiguredApi && process.env.NEXT_PUBLIC_USE_MOCK !== "false");
 function mockReading(): Reading { return { device_id: "ESP32-001", timestamp: new Date().toISOString(), voltage: Number(energyMetrics[2].value), current: Number(energyMetrics[1].value), power: Number(energyMetrics[0].value), energy: Number(energyMetrics[4].value), frequency: 50.01, power_factor: Number(energyMetrics[3].value) }; }
 function mockSettings(): Settings { return { device_id: "ESP32-001", tariff_class: "CUSTOM", tariff_per_kwh: 0, power_limit_w: 1500, daily_cost_limit_rp: 250000 }; }
 function mockCost(): CostSummary { const reading = mockReading(); return { device_id: reading.device_id, tariff_per_kwh: 0, today: { energy_kwh: reading.energy, cost_rp: 0 }, month: { energy_kwh: 112.45, cost_rp: 0 }, projection: { energy_kwh: 140, cost_rp: 0 } }; }
