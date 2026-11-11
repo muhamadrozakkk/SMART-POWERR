@@ -17,6 +17,10 @@ import { deviceStatus, resolveDeviceForUser } from "./services/deviceService.js"
 import { listNotifications } from "./services/notificationService.js";
 import { latestReading, readings } from "./services/readingService.js";
 import { checkOfflineDevices } from "./services/notificationService.js";
+import { adminRoutes } from "./routes/adminRoutes.js";
+import { ensureDeveloperAccount } from "./services/authService.js";
+import { hardwareRoutes } from "./routes/hardwareRoutes.js";
+import { userRoutes } from "./routes/userRoutes.js";
 
 export const app = express();
 app.disable("x-powered-by");
@@ -33,6 +37,9 @@ app.get("/health", healthHandler);
 app.get("/api/health", healthHandler);
 
 app.use("/api/auth", loginLimiter, authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/hardware", hardwareRoutes);
 app.use("/api/readings", readingRoutes);
 app.use("/api/cost", costRoutes);
 app.use("/api/settings", settingsRoutes);
@@ -67,6 +74,15 @@ app.post("/api/contact", (request, response) => {
 app.use(notFound);
 app.use(errorHandler);
 
+if (pool) {
+  try {
+    const created = await ensureDeveloperAccount();
+    console.log(created ? "Akun developer awal berhasil dibuat" : "Akun developer utama sudah tersedia");
+  } catch (error) { console.error("Seed akun developer gagal:", error); }
+}
 const server = app.listen(env.port, () => console.log(`SMART POWER API berjalan di http://localhost:${env.port} (${env.timezone})`));
-if (pool) { const timer = setInterval(() => { checkOfflineDevices().catch((error) => console.error("Pengecekan offline gagal", error)); }, 30_000); timer.unref(); }
+if (pool) {
+  const timer = setInterval(() => { checkOfflineDevices().catch((error) => console.error("Pengecekan offline gagal", error)); }, 30_000);
+  timer.unref();
+}
 export default server;

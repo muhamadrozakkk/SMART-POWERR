@@ -10,6 +10,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   useEffect(() => { const handleUnauthorized = () => router.push(`/login?message=${encodeURIComponent("Sesi berakhir, silakan masuk kembali.")}`); window.addEventListener("spw:unauthorized", handleUnauthorized); return () => window.removeEventListener("spw:unauthorized", handleUnauthorized); }, [router]);
-  if (["/", "/login", "/fitur", "/tentang", "/kontak"].includes(pathname)) return <>{children}</>;
+  if (["/", "/login", "/forgot-password", "/reset-password", "/fitur", "/tentang", "/kontak"].includes(pathname)) return <>{children}</>;
   return <div className="app-shell"><Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} /><div className="main-area"><Header onMenu={() => setSidebarOpen(true)} /><main className="content-area">{children}</main></div></div>;
 }

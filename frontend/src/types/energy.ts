@@ -17,6 +17,7 @@ export interface PowerReading {
   energy: number;
   current: number;
   voltage: number;
+  cost?: number;
 }
 
 export interface DeviceStatus {

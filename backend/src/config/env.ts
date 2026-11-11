@@ -14,6 +14,12 @@ export const env = {
   demoPassword: process.env.DEMO_PASSWORD ?? "smartpower",
   onlineThresholdSeconds: Number(process.env.ONLINE_THRESHOLD_SECONDS ?? 60),
   notificationCooldownSeconds: Number(process.env.NOTIFICATION_COOLDOWN_SECONDS ?? 600),
+  frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:3000",
+  smtpHost: process.env.SMTP_HOST ?? "",
+  smtpPort: Number(process.env.SMTP_PORT ?? 587),
+  smtpUser: process.env.SMTP_USER ?? "",
+  smtpPassword: process.env.SMTP_PASSWORD ?? "",
+  smtpFrom: process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "",
 };
 
 export function requireConfig(name: "DATABASE_URL" | "DEVICE_API_KEY" | "JWT_SECRET") {

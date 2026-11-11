@@ -6,7 +6,7 @@ import { ArrowLeft, Bolt, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, UserRound
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
-type AuthResult = { token?: string };
+type AuthResult = { token?: string; user?: { role?: "DEVELOPER" | "USER" } };
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,8 +28,10 @@ export default function LoginPage() {
         body: JSON.stringify(isRegister ? { name, email, password } : { email, password }),
       });
       if (result.token) window.localStorage.setItem("spw_access_token", result.token);
+      const role = result.user?.role ?? "USER";
       document.cookie = "spw_demo_auth=1; path=/; max-age=28800; samesite=lax";
-      router.push("/dashboard");
+      document.cookie = `spw_demo_role=${role}; path=/; max-age=28800; samesite=lax`;
+      router.push(role === "DEVELOPER" ? "/dashboard/developer" : "/dashboard/user");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Tidak dapat menghubungi server. Coba lagi.");
     } finally {
@@ -60,7 +62,7 @@ export default function LoginPage() {
           <div className="login-input"><Mail size={17} /><input id="email" type="email" autoComplete="email" placeholder="nama@email.com" value={email} onChange={(event) => setEmail(event.target.value)} required /></div>
           <label htmlFor="password">Password</label>
           <div className="login-input"><LockKeyhole size={17} /><input id="password" type={showPassword ? "text" : "password"} autoComplete={isRegister ? "new-password" : "current-password"} placeholder={isRegister ? "Minimal 8 karakter" : "Masukkan password"} minLength={isRegister ? 8 : undefined} value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>
-          {!isRegister && <div className="login-options"><label><input type="checkbox" /> Ingat saya</label><a href="mailto:hello@smartpower.web?subject=Bantuan%20akses%20SMART%20POWER%20WEB">Lupa password?</a></div>}
+          {!isRegister && <div className="login-options"><label><input type="checkbox" /> Ingat saya</label><Link href="/forgot-password">Lupa password?</Link></div>}
           {error ? <p className="login-error" role="alert">{error}</p> : null}
           <button type="submit" className="login-submit" disabled={loading}>{loading ? "Memproses..." : isRegister ? "Buat Akun" : "Masuk ke Dashboard"}</button>
         </form>

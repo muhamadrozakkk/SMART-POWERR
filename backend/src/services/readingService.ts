@@ -17,8 +17,14 @@ export async function saveReading(input: ReadingInput) {
     await client.query("INSERT INTO settings(device_id, tariff_class, tariff_per_kwh, power_limit_w, daily_cost_limit_rp) VALUES($1, 'CUSTOM', 0, 1500, 250000) ON CONFLICT(device_id) DO NOTHING", [input.device_id]);
     await client.query("INSERT INTO readings(device_id, ts, voltage, current, power, energy, frequency, power_factor) VALUES($1,$2,$3,$4,$5,$6,$7,$8)", [input.device_id, timestamp, input.voltage, input.current, input.power, input.energy, input.frequency, input.power_factor]);
   });
-  const setting = await query<{ power_limit_w: number }>("SELECT power_limit_w FROM settings WHERE device_id=$1", [input.device_id]);
-  if (setting.rows[0] && input.power > Number(setting.rows[0].power_limit_w)) await createWithCooldown(input.device_id, "power_limit", input.power, Number(setting.rows[0].power_limit_w));
+  const setting = await query<{ power_limit_w: number; max_current_limit_a: number }>("SELECT power_limit_w, max_current_limit_a FROM settings WHERE device_id=$1", [input.device_id]);
+  if (setting.rows[0]) {
+    const powerLimit = Number(setting.rows[0].power_limit_w);
+    const currentLimit = Number(setting.rows[0].max_current_limit_a);
+    const powerAlert = input.power > powerLimit ? await createWithCooldown(input.device_id, "power_limit", input.power, powerLimit) : false;
+    const currentAlert = input.current > currentLimit ? await createWithCooldown(input.device_id, "current_limit", input.current, currentLimit) : false;
+    if (powerAlert || currentAlert) await query("INSERT INTO hardware_commands(device_id,command,payload) VALUES($1,'buzzer',$2::jsonb)", [input.device_id, JSON.stringify({ enabled: true, duration_ms: 5000, reason: powerAlert ? "power_limit" : "current_limit" })]);
+  }
   return { ok: true };
 }
 
