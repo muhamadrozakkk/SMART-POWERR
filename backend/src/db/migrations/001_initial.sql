@@ -31,8 +31,8 @@ CREATE INDEX IF NOT EXISTS readings_device_ts_idx ON readings(device_id, ts);
 CREATE TABLE IF NOT EXISTS settings (
   device_id TEXT PRIMARY KEY REFERENCES devices(device_id) ON DELETE CASCADE,
   user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
-  tariff_class TEXT NOT NULL DEFAULT 'CUSTOM',
-  tariff_per_kwh NUMERIC(12,2) NOT NULL DEFAULT 0,
+  tariff_class TEXT NOT NULL DEFAULT 'R1_1300VA',
+  tariff_per_kwh NUMERIC(12,2) NOT NULL DEFAULT 1444.70,
   power_limit_w NUMERIC(12,2) NOT NULL DEFAULT 1500,
   daily_cost_limit_rp NUMERIC(14,2) NOT NULL DEFAULT 250000,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

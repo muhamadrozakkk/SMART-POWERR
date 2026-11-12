@@ -2,9 +2,9 @@ import { alarmData, deviceStatus as mockDevice, energyMetrics, powerHistory } fr
 import type { DeviceStatus } from "@/types/energy";
 
 export type Reading = { device_id: string; timestamp: string; voltage: number; current: number; power: number; energy: number; frequency: number; power_factor: number };
-export type Settings = { device_id: string; tariff_class: string; tariff_per_kwh: number; power_limit_w: number; max_current_limit_a: number; daily_cost_limit_rp: number };
+export type Settings = { device_id: string; tariff_class: string; tariff_per_kwh: number; power_limit_w: number; max_current_limit_a: number; daily_energy_limit_kwh: number; daily_cost_limit_rp: number };
 export type CostSummary = { device_id: string; tariff_per_kwh: number; today: { energy_kwh: number; cost_rp: number }; month: { energy_kwh: number; cost_rp: number }; projection: { energy_kwh: number; cost_rp: number } };
-export type ApiNotification = { id: number; device_id: string; type: "power_limit" | "current_limit" | "cost_limit" | "device_offline"; value: number; limit: number; created_at: string; is_read: boolean };
+export type ApiNotification = { id: number; device_id: string; type: "power_limit" | "current_limit" | "energy_limit" | "cost_limit" | "device_offline"; value: number; limit: number; created_at: string; is_read: boolean };
 export type ApiDeviceStatus = { device_id: string; name: string; is_online: boolean; last_seen: string | null };
 
 export class ApiRequestError extends Error { constructor(message: string, public readonly status: number) { super(message); this.name = "ApiRequestError"; } }
@@ -13,7 +13,7 @@ const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUB
 // Data mock hanya dipakai jika diminta secara eksplisit; selain itu request selalu ke backend.
 const useMock = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 function mockReading(): Reading { return { device_id: "ESP32-001", timestamp: new Date().toISOString(), voltage: Number(energyMetrics[2].value), current: Number(energyMetrics[1].value), power: Number(energyMetrics[0].value), energy: Number(energyMetrics[4].value), frequency: 50.01, power_factor: Number(energyMetrics[3].value) }; }
-function mockSettings(): Settings { return { device_id: "ESP32-001", tariff_class: "R1_1300VA", tariff_per_kwh: 1444.7, power_limit_w: 2200, max_current_limit_a: 10, daily_cost_limit_rp: 250000 }; }
+function mockSettings(): Settings { return { device_id: "ESP32-001", tariff_class: "R1_1300VA", tariff_per_kwh: 1444.7, power_limit_w: 2200, max_current_limit_a: 10, daily_energy_limit_kwh: 0, daily_cost_limit_rp: 250000 }; }
 function mockCost(): CostSummary { const reading = mockReading(); return { device_id: reading.device_id, tariff_per_kwh: 0, today: { energy_kwh: reading.energy, cost_rp: 0 }, month: { energy_kwh: 112.45, cost_rp: 0 }, projection: { energy_kwh: 140, cost_rp: 0 } }; }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
@@ -28,6 +28,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
 async function mockRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const reading = mockReading();
+  if (path === "/api/settings/tariffs") return { data: [{ value: "CUSTOM", label: "Tarif khusus", tariff_per_kwh: null }, { value: "R1_900VA", label: "R-1/TR 900 VA-RTM", tariff_per_kwh: 1352 }, { value: "R1_1300VA", label: "R-1/TR 1.300 VA", tariff_per_kwh: 1444.7 }, { value: "R1_2200VA", label: "R-1/TR 2.200 VA", tariff_per_kwh: 1444.7 }, { value: "R2_3500_5500VA", label: "R-2/TR 3.500-5.500 VA", tariff_per_kwh: 1699.53 }, { value: "R3_6600VA", label: "R-3/TR atau TM 6.600 VA ke atas", tariff_per_kwh: 1699.53 }], source: "Tarif PLN Triwulan IV 2026; estimasi energi x tarif per kWh, di luar pajak/biaya lain.", source_url: "https://www.pln.co.id/tarif-listrik-triwulan-iv-2026-tetap", regulation_url: "https://jdih.esdm.go.id/storage/document/Permen%20ESDM%20Nomor%207%20Tahun%202024.pdf" } as T;
   if (path.startsWith("/api/readings/latest")) return reading as T;
   if (path.startsWith("/api/readings")) return { data: powerHistory.map((item, index) => ({ ...reading, timestamp: new Date(Date.now() - (powerHistory.length - index) * 3600000).toISOString(), voltage: item.voltage, current: item.current, power: item.power, energy: item.energy })) } as T;
   if (path.startsWith("/api/cost/summary")) return mockCost() as T;

@@ -56,18 +56,6 @@ export const alarms: AlarmRecord[] = [
   { type: "Tegangan abnormal", time: "04 Mei 2025, 14:21", value: "235.2 V", status: "Selesai", severity: "high" },
 ];
 
-export const distribution = [
-  { name: "Peralatan Rumah", value: 42, color: "#2388f2" },
-  { name: "Penerangan", value: 25, color: "#2acb5c" },
-  { name: "Elektronik", value: 18, color: "#ffb619" },
-  { name: "Lainnya", value: 15, color: "#8947e9" },
-];
-
-export const prediction = [
-  { day: "24/05", value: 5.9 }, { day: "25/05", value: 4.8 }, { day: "26/05", value: 6.6 },
-  { day: "27/05", value: 5.8 }, { day: "28/05", value: 4.4 }, { day: "29/05", value: 5.3 }, { day: "30/05", value: 6.7 },
-];
-
 export const settings = {
   powerLimit: 1500,
   monthlyCostTarget: 250000,

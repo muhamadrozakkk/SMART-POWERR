@@ -42,17 +42,6 @@ export interface CostSummary {
   title: string;
   value: string;
   detail: string;
-  progress: number;
+  progress?: number;
   tone: "amber" | "green";
-}
-
-export interface Prediction {
-  day: string;
-  value: number;
-}
-
-export interface EnergyDistribution {
-  name: string;
-  value: number;
-  color: string;
 }

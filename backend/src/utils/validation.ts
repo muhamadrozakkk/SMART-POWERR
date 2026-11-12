@@ -21,6 +21,6 @@ export function settingsInput(body: unknown) {
   const input = body as Record<string, unknown>;
   const result: Record<string, unknown> = {};
   if (input.tariff_class !== undefined) { if (typeof input.tariff_class !== "string" || !input.tariff_class.trim()) throw new HttpError(400, "tariff_class tidak valid"); result.tariff_class = input.tariff_class.trim(); }
-  for (const field of ["tariff_per_kwh", "power_limit_w", "max_current_limit_a", "daily_cost_limit_rp"]) { if (input[field] !== undefined) { if (typeof input[field] !== "number" || !Number.isFinite(input[field]) || input[field] < 0) throw new HttpError(400, `${field} harus berupa angka tidak negatif`); result[field] = input[field]; } }
+  for (const field of ["tariff_per_kwh", "power_limit_w", "max_current_limit_a", "daily_cost_limit_rp", "daily_energy_limit_kwh"]) { if (input[field] !== undefined) { if (typeof input[field] !== "number" || !Number.isFinite(input[field]) || input[field] < 0) throw new HttpError(400, `${field} harus berupa angka tidak negatif`); result[field] = input[field]; } }
   return result;
 }

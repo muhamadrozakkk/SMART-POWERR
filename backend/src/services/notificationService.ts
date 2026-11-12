@@ -2,7 +2,7 @@ import { env } from "../config/env.js";
 import { query } from "../db/pool.js";
 import { cooldownElapsed } from "../utils/cooldown.js";
 
-export type NotificationType = "power_limit" | "current_limit" | "cost_limit" | "device_offline";
+export type NotificationType = "power_limit" | "current_limit" | "energy_limit" | "cost_limit" | "device_offline";
 
 export async function createWithCooldown(deviceId: string, type: NotificationType, value: number, limitValue: number) {
   const recent = await query<{ created_at: Date }>("SELECT created_at FROM notifications WHERE device_id=$1 AND type=$2 ORDER BY created_at DESC LIMIT 1", [deviceId, type]);

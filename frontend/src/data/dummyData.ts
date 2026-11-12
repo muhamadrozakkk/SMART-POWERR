@@ -1,4 +1,4 @@
-import type { Alarm, CostSummary, DeviceStatus, EnergyDistribution, EnergyReading, Prediction, PowerReading } from "@/types/energy";
+import type { Alarm, CostSummary, DeviceStatus, EnergyReading, PowerReading } from "@/types/energy";
 
 export const energyMetrics: EnergyReading[] = [
   { label: "Daya Aktif", value: "421", unit: "W", status: "Penggunaan Normal", statusTone: "normal", icon: "bolt", accent: "blue", trend: [310, 355, 330, 372, 340, 356, 385, 370, 395, 421, 405, 421] },
@@ -36,13 +36,6 @@ export const powerHistory: PowerReading[] = [
   { time: "10:00", power: 421, energy: 13.4, current: 1.92, voltage: 220.4 },
 ];
 
-export const energyDistribution: EnergyDistribution[] = [
-  { name: "Peralatan Rumah", value: 42, color: "#2388f2" },
-  { name: "Penerangan", value: 25, color: "#2acb5c" },
-  { name: "Elektronik", value: 18, color: "#ffb619" },
-  { name: "Lainnya", value: 15, color: "#8947e9" },
-];
-
 export const deviceStatus: DeviceStatus = {
   name: "Smart Power Web",
   deviceId: "ESP32-001",
@@ -64,11 +57,6 @@ export const recentReadings = [
   ["10:26:00", "220.1", "1.88", "414", "8.38", "5.592"],
   ["10:24:00", "220.3", "1.95", "429", "8.36", "5.568"],
   ["10:22:00", "219.9", "1.90", "417", "8.34", "5.544"],
-];
-
-export const predictionData: Prediction[] = [
-  { day: "24/05", value: 5.9 }, { day: "25/05", value: 4.8 }, { day: "26/05", value: 6.6 },
-  { day: "27/05", value: 5.8 }, { day: "28/05", value: 4.4 }, { day: "29/05", value: 5.3 }, { day: "30/05", value: 6.7 },
 ];
 
 export const alarmData: Alarm[] = [
