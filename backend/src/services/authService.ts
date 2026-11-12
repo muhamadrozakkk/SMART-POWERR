@@ -71,15 +71,22 @@ export async function resetPassword(token: string, newPassword: string) {
 }
 
 export async function ensureDeveloperAccount() {
-  const email = "muhamad.rozak@students.untidar.ac.id";
-  const existing = await query<{ id: number }>("SELECT id FROM users WHERE lower(email)=lower($1)", [email]);
-  if (existing.rows[0]) {
-    await query("UPDATE users SET role='DEVELOPER' WHERE id=$1", [existing.rows[0].id]);
+  const email = env.developerEmail.toLowerCase();
+  const password = env.developerPassword;
+  if (!email || !password) {
+    console.warn("Akun developer tidak dibuat: DEVELOPER_EMAIL dan DEVELOPER_PASSWORD wajib dikonfigurasi.");
     return false;
   }
-  const passwordHash = await bcrypt.hash("SMARPOWER123", 12);
-  await query("INSERT INTO users(name, email, password_hash, role) VALUES($1,$2,$3,'DEVELOPER')", ["Developer Utama", email, passwordHash]);
+  if (password.length < 12) {
+    console.warn("Akun developer tidak dibuat: DEVELOPER_PASSWORD harus minimal 12 karakter.");
+    return false;
+  }
+  const existing = await query<{ id: number; role: AuthUser["role"] }>("SELECT id, role FROM users WHERE lower(email)=lower($1)", [email]);
+  if (existing.rows[0]) {
+    if (existing.rows[0].role !== "DEVELOPER") await query("UPDATE users SET role='DEVELOPER' WHERE id=$1", [existing.rows[0].id]);
+    return false;
+  }
+  const passwordHash = await bcrypt.hash(password, 12);
+  await query("INSERT INTO users(name, email, password_hash, role) VALUES($1,$2,$3,'DEVELOPER')", ["Developer", email, passwordHash]);
   return true;
 }
-
-export const demoCredentials = { email: env.demoEmail, password: env.demoPassword };

@@ -24,6 +24,7 @@ import { userRoutes } from "./routes/userRoutes.js";
 
 export const app = express();
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
 app.use(helmet());
 app.use(cors({ origin: (origin, callback) => { if (!origin || env.corsOrigins.includes(origin)) return callback(null, true); return callback(new Error("Origin tidak diizinkan oleh CORS")); }, credentials: true }));
 app.use(express.json({ limit: "32kb" }));

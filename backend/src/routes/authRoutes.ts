@@ -1,16 +1,19 @@
 import { Router } from "express";
 import nodemailer from "nodemailer";
+import rateLimit from "express-rate-limit";
 import { env } from "../config/env.js";
 import { login, register, requestPasswordReset, resetPassword } from "../services/authService.js";
 import { HttpError } from "../utils/errors.js";
 import { requireAuth } from "../middleware/auth.js";
 
 export const authRoutes = Router();
+const forgotPasswordLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false, message: { error: "Terlalu banyak permintaan reset password. Coba lagi nanti." } });
+const registerLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false, message: { error: "Terlalu banyak percobaan pendaftaran. Coba lagi nanti." } });
 authRoutes.get("/me", requireAuth, (request, response, next) => {
   try { if (!request.user) throw new HttpError(401, "Sesi pengguna tidak ditemukan"); response.json({ user: request.user }); }
   catch (error) { next(error); }
 });
-authRoutes.post("/forgot-password", async (request, response, next) => {
+authRoutes.post("/forgot-password", forgotPasswordLimiter, async (request, response, next) => {
   try {
     const { email } = request.body as { email?: unknown };
     if (typeof email !== "string" || !email.trim()) throw new HttpError(400, "Email wajib diisi");
@@ -38,7 +41,7 @@ authRoutes.post("/reset-password", async (request, response, next) => {
   } catch (error) { next(error); }
 });
 
-authRoutes.post("/register", async (request, response, next) => {
+authRoutes.post("/register", registerLimiter, async (request, response, next) => {
   try {
     const { name, email, password } = request.body as { name?: unknown; email?: unknown; password?: unknown };
     if (typeof name !== "string" || typeof email !== "string" || typeof password !== "string") throw new HttpError(400, "Nama, email, dan password wajib diisi");
