@@ -3,8 +3,13 @@ import nodemailer from "nodemailer";
 import { env } from "../config/env.js";
 import { login, register, requestPasswordReset, resetPassword } from "../services/authService.js";
 import { HttpError } from "../utils/errors.js";
+import { requireAuth } from "../middleware/auth.js";
 
 export const authRoutes = Router();
+authRoutes.get("/me", requireAuth, (request, response, next) => {
+  try { if (!request.user) throw new HttpError(401, "Sesi pengguna tidak ditemukan"); response.json({ user: request.user }); }
+  catch (error) { next(error); }
+});
 authRoutes.post("/forgot-password", async (request, response, next) => {
   try {
     const { email } = request.body as { email?: unknown };

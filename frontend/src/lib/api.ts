@@ -7,10 +7,12 @@ export type CostSummary = { device_id: string; tariff_per_kwh: number; today: { 
 export type ApiNotification = { id: number; device_id: string; type: "power_limit" | "current_limit" | "cost_limit" | "device_offline"; value: number; limit: number; created_at: string; is_read: boolean };
 export type ApiDeviceStatus = { device_id: string; name: string; is_online: boolean; last_seen: string | null };
 
+export class ApiRequestError extends Error { constructor(message: string, public readonly status: number) { super(message); this.name = "ApiRequestError"; } }
+
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000").replace(/\/$/, "");
 const hasConfiguredApi = Boolean(process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL);
-// URL API yang diisi berarti gunakan backend nyata. Mock bisa dipaksa lewat NEXT_PUBLIC_USE_MOCK=true.
-const useMock = process.env.NEXT_PUBLIC_USE_MOCK === "true" || (!hasConfiguredApi && process.env.NEXT_PUBLIC_USE_MOCK !== "false");
+// Data mock hanya dipakai jika diminta secara eksplisit; selain itu request selalu ke backend.
+const useMock = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 function mockReading(): Reading { return { device_id: "ESP32-001", timestamp: new Date().toISOString(), voltage: Number(energyMetrics[2].value), current: Number(energyMetrics[1].value), power: Number(energyMetrics[0].value), energy: Number(energyMetrics[4].value), frequency: 50.01, power_factor: Number(energyMetrics[3].value) }; }
 function mockSettings(): Settings { return { device_id: "ESP32-001", tariff_class: "R1_1300VA", tariff_per_kwh: 1444.7, power_limit_w: 2200, max_current_limit_a: 10, daily_cost_limit_rp: 250000 }; }
 function mockCost(): CostSummary { const reading = mockReading(); return { device_id: reading.device_id, tariff_per_kwh: 0, today: { energy_kwh: reading.energy, cost_rp: 0 }, month: { energy_kwh: 112.45, cost_rp: 0 }, projection: { energy_kwh: 140, cost_rp: 0 } }; }
@@ -21,7 +23,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   const response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) } });
   const payload = await response.json().catch(() => ({})) as T & { error?: string };
   if (response.status === 401 && typeof window !== "undefined") { window.localStorage.removeItem("spw_access_token"); document.cookie = "spw_demo_auth=; path=/; max-age=0"; window.dispatchEvent(new CustomEvent("spw:unauthorized")); }
-  if (!response.ok) throw new Error(payload.error ?? `API request gagal (${response.status})`);
+  if (!response.ok) throw new ApiRequestError(payload.error ?? `API request gagal (${response.status})`, response.status);
   return payload;
 }
 

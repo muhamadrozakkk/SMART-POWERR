@@ -1,33 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Download, Filter } from "lucide-react";
-import { powerHistory, recentReadings } from "@/data/dummyData";
+import { apiRequest, type Reading } from "@/lib/api";
 import { PageHeader } from "@/components/common/PageHeader";
 import { SimpleBarChart } from "@/components/common/SimpleBarChart";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { StatGrid } from "@/components/common/StatGrid";
 
-const rows = [...recentReadings, ["10:20:00", "220.1", "1.87", "410", "8.31", "5.518"], ["10:18:00", "220.5", "1.91", "420", "8.29", "5.492"]];
-const headers = ["Waktu", "Tegangan (V)", "Arus (A)", "Daya (W)", "Energi (kWh)", "Biaya (Rp)"];
-
+const headers = ["Tanggal", "Tegangan (V)", "Arus (A)", "Daya (W)", "Energi (kWh)"];
+function dateField(date: Date) { const offset = date.getTimezoneOffset(); return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10); }
 export default function HistoryPage() {
-  const [from, setFrom] = useState("2025-05-01");
-  const [to, setTo] = useState("2025-05-24");
-  const [parameter, setParameter] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("");
-  const stats = [{ label: "Total energi", value: "112.45 kWh", detail: "Periode terpilih", icon: "zap" as const, tone: "blue" }, { label: "Rata-rata energi", value: "4.68 kWh", detail: "Per hari", icon: "activity" as const, tone: "green" }, { label: "Konsumsi tertinggi", value: "1.024 W", detail: "06:30 WIB", icon: "up" as const, tone: "amber" }, { label: "Konsumsi terendah", value: "242 W", detail: "03:15 WIB", icon: "down" as const, tone: "purple" }];
-  function applyFilter() {
-    setFilterStatus(`Filter diterapkan: ${from} sampai ${to} · ${parameter === "all" ? "semua parameter" : parameter}`);
-  }
-  function exportData() {
-    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "smart-power-riwayat.csv";
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-  return <><PageHeader title="Riwayat Data" description="Lihat pola penggunaan energi dan rekaman pengukuran perangkat." action={<button className="primary-button" onClick={exportData}><Download size={15} />Export data</button>} />{filterStatus ? <p className="settings-status">{filterStatus}</p> : null}<StatGrid stats={stats} /><div className="two-column"><SectionCard title="Tren daya historis"><SimpleBarChart data={powerHistory.slice(-12).map((item) => ({ day: item.time, value: item.power }))} unit="W" /></SectionCard><SectionCard title="Filter data"><div className="form-grid"><div className="form-field"><label htmlFor="from">Dari tanggal</label><input id="from" type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></div><div className="form-field"><label htmlFor="to">Sampai tanggal</label><input id="to" type="date" value={to} onChange={(event) => setTo(event.target.value)} /></div><div className="form-field"><label htmlFor="parameter">Parameter</label><select id="parameter" value={parameter} onChange={(event) => setParameter(event.target.value)}><option value="all">Semua parameter</option><option value="Daya aktif">Daya aktif</option><option value="Energi">Energi</option><option value="Tegangan">Tegangan</option></select></div></div><button className="secondary-button" style={{ marginTop: 18 }} onClick={applyFilter}><Filter size={15} />Terapkan filter</button></SectionCard></div><SectionCard title="Rekaman pengukuran" className="data-panel"><div className="table-scroll"><table><thead><tr>{headers.map((item) => <th key={item}>{item}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row[0]}>{row.map((cell, index) => <td key={`${row[0]}-${index}`}>{cell}</td>)}</tr>)}</tbody></table></div></SectionCard></>;
+  const end = new Date(); const start = new Date(Date.now() - 6 * 86400000);
+  const [from, setFrom] = useState(dateField(start)); const [to, setTo] = useState(dateField(end)); const [parameter, setParameter] = useState("all"); const [rows, setRows] = useState<Reading[]>([]); const [filterStatus, setFilterStatus] = useState(""); const [error, setError] = useState("");
+  async function load(fromValue = from, toValue = to) { try { const fromDate = new Date(`${fromValue}T00:00:00`).toISOString(); const toDate = new Date(`${toValue}T23:59:59`).toISOString(); const result = await apiRequest<{ data: Reading[] }>(`/api/readings?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}&interval=day`); setRows(result.data); setError(""); } catch (reason) { setError(reason instanceof Error ? reason.message : "Riwayat belum tersedia"); setRows([]); } }
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, []);
+  function applyFilter(event: FormEvent) { event.preventDefault(); setFilterStatus(`Periode ${from} hingga ${to} · ${parameter === "all" ? "semua parameter" : parameter}`); void load(); }
+  function exportData() { const dataRows = rows.map((row) => [row.timestamp, row.voltage, row.current, row.power, row.energy]); const csv = [headers, ...dataRows].map((row) => row.join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = "smart-power-riwayat.csv"; link.click(); URL.revokeObjectURL(url); }
+  const total = rows.reduce((sum, row) => sum + row.energy, 0); const mean = rows.length ? total / rows.length : 0; const highest = rows.length ? Math.max(...rows.map((row) => row.power)) : 0; const lowest = rows.length ? Math.min(...rows.map((row) => row.power)) : 0;
+  const stats = [{ label: "Total energi", value: `${total.toFixed(2)} kWh`, detail: "Akumulasi periode", icon: "zap" as const, tone: "blue" }, { label: "Rata-rata energi", value: `${mean.toFixed(2)} kWh`, detail: "Per hari tercatat", icon: "activity" as const, tone: "green" }, { label: "Daya tertinggi", value: `${highest.toLocaleString("id-ID")} W`, detail: "Dalam periode ini", icon: "up" as const, tone: "amber" }, { label: "Daya terendah", value: `${lowest.toLocaleString("id-ID")} W`, detail: "Dalam periode ini", icon: "down" as const, tone: "purple" }];
+  return <><PageHeader title="Riwayat Data" description="Rekaman historis dari payload sensor ESP32." action={<button className="primary-button" onClick={exportData} disabled={!rows.length}><Download size={15} />Export data aktual</button>} />{filterStatus && <p className="settings-status">Filter: {filterStatus}</p>}{error && <p className="settings-status">{error}</p>}<StatGrid stats={stats} /><div className="two-column"><SectionCard title="Tren daya harian"><SimpleBarChart data={rows.map((item) => ({ day: new Date(item.timestamp).toLocaleDateString("id-ID", { day: "2-digit", month: "short" }), value: item.power }))} unit="W" />{!rows.length && <p className="muted">Grafik menunggu data sensor.</p>}</SectionCard><SectionCard title="Filter data"><form onSubmit={applyFilter}><div className="form-grid"><div className="form-field"><label htmlFor="from">Dari tanggal</label><input id="from" type="date" value={from} onChange={(event) => setFrom(event.target.value)} /></div><div className="form-field"><label htmlFor="to">Sampai tanggal</label><input id="to" type="date" value={to} onChange={(event) => setTo(event.target.value)} /></div><div className="form-field"><label htmlFor="parameter">Parameter</label><select id="parameter" value={parameter} onChange={(event) => setParameter(event.target.value)}><option value="all">Semua parameter</option><option value="power">Daya aktif</option><option value="energy">Energi</option><option value="voltage">Tegangan</option></select></div></div><button className="secondary-button" style={{ marginTop: 18 }}><Filter size={15} />Terapkan filter</button></form></SectionCard></div><SectionCard title="Rekaman pengukuran" className="data-panel"><div className="table-scroll"><table><thead><tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.timestamp}><td>{new Date(row.timestamp).toLocaleString("id-ID")}</td><td>{row.voltage}</td><td>{row.current}</td><td>{row.power}</td><td>{row.energy}</td></tr>)}</tbody></table></div>{!rows.length && <p className="muted">Belum ada pembacaan pada periode ini.</p>}<div className="table-footer"><span>{rows.length} rekaman harian</span></div></SectionCard></>;
 }

@@ -36,7 +36,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
         return <Link key={href} href={href} className={active ? "active" : ""} onClick={onClose}><Icon size={21} strokeWidth={1.8} /><span>{label}</span></Link>;
       })}</nav>
       <div className="sidebar-bottom">
-        <div className="connection-card"><div className="connection-title"><span className="status-dot" />Perangkat Online</div><p>Terhubung ke Smart Power Web</p><div className="connection-line" /><span>Terakhir Update</span><strong>10:30:45 WIB</strong><span>24 Mei 2025</span></div>
+        <div className="connection-card"><div className="connection-title"><span className="status-dot" />Status perangkat</div><p>Status koneksi dan pembaruan sensor tampil pada halaman Perangkat.</p><div className="connection-line" /><Link href="/perangkat" onClick={onClose}>Lihat perangkat</Link></div>
         <button className="logout-button" onClick={handleLogout}><DoorOpen size={20} />Logout</button>
       </div>
     </aside>
