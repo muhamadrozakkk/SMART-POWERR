@@ -10,7 +10,6 @@ export type ApiDeviceStatus = { device_id: string; name: string; is_online: bool
 export class ApiRequestError extends Error { constructor(message: string, public readonly status: number) { super(message); this.name = "ApiRequestError"; } }
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000").replace(/\/$/, "");
-const hasConfiguredApi = Boolean(process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL);
 // Data mock hanya dipakai jika diminta secara eksplisit; selain itu request selalu ke backend.
 const useMock = process.env.NEXT_PUBLIC_USE_MOCK === "true";
 function mockReading(): Reading { return { device_id: "ESP32-001", timestamp: new Date().toISOString(), voltage: Number(energyMetrics[2].value), current: Number(energyMetrics[1].value), power: Number(energyMetrics[0].value), energy: Number(energyMetrics[4].value), frequency: 50.01, power_factor: Number(energyMetrics[3].value) }; }

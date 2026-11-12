@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Download, Filter } from "lucide-react";
 import { apiRequest, type Reading } from "@/lib/api";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -11,11 +11,10 @@ import { StatGrid } from "@/components/common/StatGrid";
 const headers = ["Tanggal", "Tegangan (V)", "Arus (A)", "Daya (W)", "Energi (kWh)"];
 function dateField(date: Date) { const offset = date.getTimezoneOffset(); return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 10); }
 export default function HistoryPage() {
-  const end = new Date(); const start = new Date(Date.now() - 6 * 86400000);
-  const [from, setFrom] = useState(dateField(start)); const [to, setTo] = useState(dateField(end)); const [parameter, setParameter] = useState("all"); const [rows, setRows] = useState<Reading[]>([]); const [filterStatus, setFilterStatus] = useState(""); const [error, setError] = useState("");
-  async function load(fromValue = from, toValue = to) { try { const fromDate = new Date(`${fromValue}T00:00:00`).toISOString(); const toDate = new Date(`${toValue}T23:59:59`).toISOString(); const result = await apiRequest<{ data: Reading[] }>(`/api/readings?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}&interval=day`); setRows(result.data); setError(""); } catch (reason) { setError(reason instanceof Error ? reason.message : "Riwayat belum tersedia"); setRows([]); } }
-  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, []);
-  function applyFilter(event: FormEvent) { event.preventDefault(); setFilterStatus(`Periode ${from} hingga ${to} · ${parameter === "all" ? "semua parameter" : parameter}`); void load(); }
+  const [from, setFrom] = useState(""); const [to, setTo] = useState(""); const [parameter, setParameter] = useState("all"); const [rows, setRows] = useState<Reading[]>([]); const [filterStatus, setFilterStatus] = useState(""); const [error, setError] = useState("");
+  const load = useCallback(async (fromValue: string, toValue: string) => { try { const fromDate = new Date(`${fromValue}T00:00:00`).toISOString(); const toDate = new Date(`${toValue}T23:59:59`).toISOString(); const result = await apiRequest<{ data: Reading[] }>(`/api/readings?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}&interval=day`); setRows(result.data); setError(""); } catch (reason) { setError(reason instanceof Error ? reason.message : "Riwayat belum tersedia"); setRows([]); } }, []);
+  useEffect(() => { const timer = window.setTimeout(() => { const end = new Date(); const start = new Date(Date.now() - 6 * 86400000); const fromValue = dateField(start); const toValue = dateField(end); setFrom(fromValue); setTo(toValue); void load(fromValue, toValue); }, 0); return () => window.clearTimeout(timer); }, [load]);
+  function applyFilter(event: FormEvent) { event.preventDefault(); setFilterStatus(`Periode ${from} hingga ${to} · ${parameter === "all" ? "semua parameter" : parameter}`); void load(from, to); }
   function exportData() { const dataRows = rows.map((row) => [row.timestamp, row.voltage, row.current, row.power, row.energy]); const csv = [headers, ...dataRows].map((row) => row.join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" })); const link = document.createElement("a"); link.href = url; link.download = "smart-power-riwayat.csv"; link.click(); URL.revokeObjectURL(url); }
   const total = rows.reduce((sum, row) => sum + row.energy, 0); const mean = rows.length ? total / rows.length : 0; const highest = rows.length ? Math.max(...rows.map((row) => row.power)) : 0; const lowest = rows.length ? Math.min(...rows.map((row) => row.power)) : 0;
   const stats = [{ label: "Total energi", value: `${total.toFixed(2)} kWh`, detail: "Akumulasi periode", icon: "zap" as const, tone: "blue" }, { label: "Rata-rata energi", value: `${mean.toFixed(2)} kWh`, detail: "Per hari tercatat", icon: "activity" as const, tone: "green" }, { label: "Daya tertinggi", value: `${highest.toLocaleString("id-ID")} W`, detail: "Dalam periode ini", icon: "up" as const, tone: "amber" }, { label: "Daya terendah", value: `${lowest.toLocaleString("id-ID")} W`, detail: "Dalam periode ini", icon: "down" as const, tone: "purple" }];
