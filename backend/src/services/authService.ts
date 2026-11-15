@@ -7,7 +7,7 @@ import { HttpError } from "../utils/errors.js";
 export type AuthUser = { id: number; email: string; name: string; role: "DEVELOPER" | "USER" };
 
 function signUser(user: AuthUser) {
-  const token = jwt.sign({ id: user.id, sub: String(user.id), email: user.email, role: user.role }, requireConfig("JWT_SECRET"), { expiresIn: "8h" });
+  const token = jwt.sign({ id: user.id, sub: String(user.id), email: user.email, name: user.name, role: user.role }, requireConfig("JWT_SECRET"), { expiresIn: "8h" });
   return { token, user: { ...user, role: user.role } };
 }
 

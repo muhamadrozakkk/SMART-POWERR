@@ -13,8 +13,8 @@ export async function saveReading(input: ReadingInput) {
   const timestamp = input.timestamp ? new Date(input.timestamp) : new Date();
   if (Math.abs(Date.now() - timestamp.getTime()) > 24 * 60 * 60 * 1000) console.warn(`Timestamp pembacaan jauh dari waktu server: ${input.device_id}`);
   await transaction(async (client) => {
-    await client.query("INSERT INTO devices(device_id, name, last_seen) VALUES($1, $2, $3) ON CONFLICT(device_id) DO UPDATE SET last_seen=EXCLUDED.last_seen", [input.device_id, "Smart Power Web", timestamp]);
-    await client.query("INSERT INTO settings(device_id, tariff_class, tariff_per_kwh, power_limit_w, daily_cost_limit_rp) VALUES($1, 'R1_1300VA', 1444.70, 1500, 250000) ON CONFLICT(device_id) DO NOTHING", [input.device_id]);
+    const device = await client.query("UPDATE devices SET last_seen=$2 WHERE device_id=$1 RETURNING device_id", [input.device_id, timestamp]);
+    if (!device.rowCount) throw new HttpError(404, "Device ID belum terdaftar. Daftarkan perangkat terlebih dahulu.");
     await client.query("INSERT INTO readings(device_id, ts, voltage, current, power, energy, frequency, power_factor) VALUES($1,$2,$3,$4,$5,$6,$7,$8)", [input.device_id, timestamp, input.voltage, input.current, input.power, input.energy, input.frequency, input.power_factor]);
   });
   const setting = await query<{ power_limit_w: number; max_current_limit_a: number; daily_energy_limit_kwh: number; daily_cost_limit_rp: number; tariff_per_kwh: number }>("SELECT power_limit_w, max_current_limit_a, daily_energy_limit_kwh, daily_cost_limit_rp, tariff_per_kwh FROM settings WHERE device_id=$1", [input.device_id]);

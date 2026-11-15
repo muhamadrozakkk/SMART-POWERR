@@ -8,7 +8,7 @@ export const env = {
   databaseUrl: process.env.DATABASE_URL ?? "",
   deviceApiKey: process.env.DEVICE_API_KEY ?? "",
   jwtSecret: process.env.JWT_SECRET ?? "",
-  corsOrigins: csv(process.env.CORS_ORIGINS ?? process.env.FRONTEND_URL, "http://localhost:3000"),
+  corsOrigins: [...new Set([...csv(process.env.CORS_ORIGINS, ""), process.env.FRONTEND_URL, "http://localhost:3000", "https://smart-powerr.vercel.app"].filter((origin): origin is string => Boolean(origin?.trim())).map((origin) => origin.trim().replace(/\/$/, "")))],
   timezone: process.env.TZ ?? "Asia/Jakarta",
   developerEmail: process.env.DEVELOPER_EMAIL?.trim() ?? "",
   developerPassword: process.env.DEVELOPER_PASSWORD ?? "",

@@ -21,6 +21,7 @@ import { adminRoutes } from "./routes/adminRoutes.js";
 import { ensureDeveloperAccount } from "./services/authService.js";
 import { hardwareRoutes } from "./routes/hardwareRoutes.js";
 import { userRoutes } from "./routes/userRoutes.js";
+import { telemetryRoutes } from "./routes/telemetryRoutes.js";
 
 export const app = express();
 app.disable("x-powered-by");
@@ -42,6 +43,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/hardware", hardwareRoutes);
 app.use("/api/readings", readingRoutes);
+app.use("/api/telemetry", telemetryRoutes);
 app.use("/api/cost", costRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/notifications", notificationRoutes);
@@ -59,7 +61,7 @@ app.get("/api/dashboard", requireAuth, async (request, response, next) => {
   } catch (error) { next(error); }
 });
 
-app.get("/api/device", requireAuth, async (request, response, next) => { try { response.json({ data: await deviceStatus(await resolveDeviceForUser(userId(request))), simulation: false }); } catch (error) { next(error); } });
+app.get("/api/device", requireAuth, async (request, response, next) => { try { response.json({ data: await deviceStatus(await resolveDeviceForUser(userId(request), typeof request.query.device_id === "string" ? request.query.device_id : undefined)), simulation: false }); } catch (error) { next(error); } });
 app.get("/api/alarms", requireAuth, async (request, response, next) => { try { const data = await listNotifications(userId(request)); response.json({ data, total: data.length, simulation: false }); } catch (error) { next(error); } });
 app.get("/api/prediction", requireAuth, async (request, response, next) => { try { const summary = await costSummary(userId(request)); response.json({ data: [], unit: "kWh / hari", summary, simulation: false }); } catch (error) { next(error); } });
 app.get("/api/energy/distribution", requireAuth, (_request, response) => response.json({ data: [], simulation: false }));

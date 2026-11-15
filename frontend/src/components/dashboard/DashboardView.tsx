@@ -20,17 +20,25 @@ export function DashboardView() {
   const [cost, setCost] = useState<CostSummary | null>(null);
   const [device, setDevice] = useState<ApiDeviceStatus | null>(null);
   const [alarms, setAlarms] = useState<ApiNotification[]>([]);
+  const [devices, setDevices] = useState<Array<{ device_id: string; name: string }>>([]);
+  const [selectedDevice, setSelectedDevice] = useState("");
   const [error, setError] = useState("");
   const load = useCallback(async () => {
     const days = period === "day" ? 1 : period === "week" ? 7 : 30;
     const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
     const interval = period === "day" ? "hour" : period;
     try {
+      const deviceRows = await apiRequest<{ data: Array<{ device_id: string; name: string }> }>("/api/devices");
+      setDevices(deviceRows.data);
+      const deviceId = deviceRows.data.some((item) => item.device_id === selectedDevice) ? selectedDevice : deviceRows.data[0]?.device_id;
+      if (!deviceId) { setLatest(null); setHistory([]); setCost(null); setDevice(null); setError("Belum ada perangkat yang ditautkan ke akun ini."); return; }
+      if (deviceId !== selectedDevice) setSelectedDevice(deviceId);
+      const queryDevice = `device_id=${encodeURIComponent(deviceId)}`;
       const results = await Promise.allSettled([
-        apiRequest<Reading>("/api/readings/latest"),
-        apiRequest<{ data: Reading[] }>(`/api/readings?from=${encodeURIComponent(from)}&interval=${interval}`),
-        apiRequest<CostSummary>("/api/cost/summary"),
-        apiRequest<{ data: ApiDeviceStatus }>("/api/device"),
+        apiRequest<Reading>(`/api/readings/latest?${queryDevice}`),
+        apiRequest<{ data: Reading[] }>(`/api/readings?${queryDevice}&from=${encodeURIComponent(from)}&interval=${interval}`),
+        apiRequest<CostSummary>(`/api/cost/summary?${queryDevice}`),
+        apiRequest<{ data: ApiDeviceStatus }>(`/api/device?${queryDevice}`),
         apiRequest<{ data: ApiNotification[] }>("/api/notifications?unread_only=false"),
       ]);
       const [latestResult, historyResult, costResult, deviceResult, alarmsResult] = results;
@@ -43,7 +51,7 @@ export function DashboardView() {
       setAlarms(alarmsResult.status === "fulfilled" ? alarmsResult.value.data : []);
       setError("");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Data dashboard gagal dimuat"); }
-  }, [period]);
+  }, [period, selectedDevice]);
   useEffect(() => { const initial = window.setTimeout(() => void load(), 0); const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 5000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [load]);
   if (error && !device) return <div className="empty-state"><strong>Dashboard menunggu perangkat</strong><span>{error}. Setelah ESP32 mengirim payload, tautkan device ke akun ini dari Dashboard Developer.</span><button className="secondary-button" onClick={() => void load()}>Coba lagi</button></div>;
   const current = latest ?? { voltage: 0, current: 0, power: 0, energy: 0, frequency: 0, power_factor: 0 } as Reading;
@@ -57,5 +65,5 @@ export function DashboardView() {
     { ...energyMetrics[1], label: "Frekuensi", value: String(current.frequency), unit: "Hz", icon: "wave", trend: trend("frequency"), status: latest ? "Data sensor" : "Menunggu sensor", statusTone: "stable" as const },
   ];
   const chartData: PowerReading[] = history.map((row) => ({ time: new Date(row.timestamp).toLocaleString("id-ID", period === "day" ? { hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "short" }), power: row.power, energy: row.energy, current: row.current, voltage: row.voltage, cost: row.energy * (cost?.tariff_per_kwh ?? 0) }));
-  return <div className="dashboard-grid">{!latest ? <p className="settings-status">Belum ada payload sensor. Angka di bawah bernilai nol sampai ESP32 mengirim pembacaan pertama.</p> : null}{error ? <p className="settings-status">{error}</p> : null}<div className="metrics-row">{metricValues.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</div><PowerChart data={chartData} period={period} onPeriodChange={setPeriod} /><div className="summary-row"><EnergySummary energyKwh={cost?.month.energy_kwh ?? 0} /><LiveCostCard value={cost?.today.cost_rp ?? 0} tariff={cost?.tariff_per_kwh ?? 0} /><CostSummaryCard summary={{ title: "Estimasi Biaya Bulan Ini", value: `Rp ${(cost?.month.cost_rp ?? 0).toLocaleString("id-ID")}`, detail: `${(cost?.month.energy_kwh ?? 0).toFixed(2)} kWh tercatat`, tone: "green" }} /><DeviceStatus deviceStatus={device ? toDeviceStatus(device) : undefined} /><AlarmStatus alarms={alarms} /></div><DataHistory readings={history.slice(-5)} tariffPerKwh={cost?.tariff_per_kwh ?? 0} /></div>;
+  return <div className="dashboard-grid">{devices.length > 0 && <label className="form-field" style={{ maxWidth: 420 }}><span>Pilih perangkat</span><select className="input-control" value={selectedDevice} onChange={(event) => setSelectedDevice(event.target.value)}>{devices.map((item) => <option key={item.device_id} value={item.device_id}>{item.name} · {item.device_id}</option>)}</select></label>}{!latest ? <p className="settings-status">Belum ada payload sensor. Angka di bawah bernilai nol sampai ESP32 mengirim pembacaan pertama.</p> : null}{error ? <p className="settings-status">{error}</p> : null}<div className="metrics-row">{metricValues.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</div><PowerChart data={chartData} period={period} onPeriodChange={setPeriod} /><div className="summary-row"><EnergySummary energyKwh={cost?.month.energy_kwh ?? 0} /><LiveCostCard value={cost?.today.cost_rp ?? 0} tariff={cost?.tariff_per_kwh ?? 0} /><CostSummaryCard summary={{ title: "Estimasi Biaya Bulan Ini", value: `Rp ${(cost?.month.cost_rp ?? 0).toLocaleString("id-ID")}`, detail: `${(cost?.month.energy_kwh ?? 0).toFixed(2)} kWh tercatat`, tone: "green" }} /><DeviceStatus deviceStatus={device ? toDeviceStatus(device) : undefined} /><AlarmStatus alarms={alarms} /></div><DataHistory readings={history.slice(-5)} tariffPerKwh={cost?.tariff_per_kwh ?? 0} /></div>;
 }

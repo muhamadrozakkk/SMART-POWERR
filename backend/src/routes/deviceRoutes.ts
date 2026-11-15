@@ -1,6 +1,38 @@
+import { randomBytes, createHash } from "node:crypto";
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth.js";
-import { deviceStatus } from "../services/deviceService.js";
+import { query, transaction } from "../db/pool.js";
+import { requireAuth, requireRole, userId } from "../middleware/auth.js";
+import { deviceStatus, resolveDeviceForUser } from "../services/deviceService.js";
+import { HttpError } from "../utils/errors.js";
 
 export const deviceRoutes = Router();
-deviceRoutes.get("/:id/status", requireAuth, async (request, response, next) => { try { response.json(await deviceStatus(String(request.params.id))); } catch (error) { next(error); } });
+deviceRoutes.use(requireAuth);
+
+deviceRoutes.get("/", async (request, response, next) => {
+  try {
+    const role = await query<{ role: string }>("SELECT role FROM users WHERE id=$1", [userId(request)]);
+    const isDeveloper = role.rows[0]?.role === "DEVELOPER";
+    const result = isDeveloper
+      ? await query("SELECT d.device_id,d.name,d.location,d.last_seen,s.user_id,u.name AS owner_name,u.email AS owner_email FROM devices d LEFT JOIN settings s ON s.device_id=d.device_id LEFT JOIN users u ON u.id=s.user_id ORDER BY d.created_at DESC")
+      : await query("SELECT d.device_id,d.name,d.location,d.last_seen,s.user_id FROM devices d JOIN settings s ON s.device_id=d.device_id WHERE s.user_id=$1 ORDER BY d.created_at DESC", [userId(request)]);
+    response.json({ data: result.rows.map((device) => ({ ...device, is_online: Boolean(device.last_seen && Date.now() - new Date(device.last_seen as string).getTime() <= 60_000) })) });
+  } catch (error) { next(error); }
+});
+
+deviceRoutes.post("/", requireRole(["DEVELOPER"]), async (request, response, next) => {
+  try {
+    const { name, location } = request.body as { name?: unknown; location?: unknown };
+    if (typeof name !== "string" || !name.trim() || name.trim().length > 120 || typeof location !== "string" || !location.trim() || location.trim().length > 240) throw new HttpError(400, "Nama perangkat dan lokasi wajib diisi (maksimal 120 dan 240 karakter)");
+    const deviceId = `SPW-${randomBytes(8).toString("hex").toUpperCase()}`;
+    const apiKey = randomBytes(32).toString("base64url");
+    const tokenHash = createHash("sha256").update(apiKey).digest("hex");
+    await transaction(async (client) => {
+      await client.query("INSERT INTO devices(device_id,name,location) VALUES($1,$2,$3)", [deviceId, name.trim(), location.trim()]);
+      await client.query("INSERT INTO settings(device_id) VALUES($1)", [deviceId]);
+      await client.query("INSERT INTO device_api_keys(device_id,token_hash) VALUES($1,$2)", [deviceId, tokenHash]);
+    });
+    response.status(201).json({ data: { device_id: deviceId, name: name.trim(), location: location.trim() }, api_key: apiKey, message: "Simpan API key sekarang; key hanya ditampilkan sekali." });
+  } catch (error) { next(error); }
+});
+
+deviceRoutes.get("/:id/status", async (request, response, next) => { try { const id = await resolveDeviceForUser(userId(request), String(request.params.id)); response.json(await deviceStatus(id)); } catch (error) { next(error); } });

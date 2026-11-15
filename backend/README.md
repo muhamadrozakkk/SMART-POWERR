@@ -23,8 +23,8 @@ Konfigurasikan variabel berikut di Railway sebelum deploy:
 - `DEVELOPER_EMAIL` dan `DEVELOPER_PASSWORD` — kredensial akun developer yang dibuat saat backend mulai. Password harus minimal 12 karakter. Jika salah satu kosong atau password terlalu pendek, pembuatan akun developer dilewati dengan peringatan. Jika email sudah terdaftar, backend hanya memastikan role menjadi `DEVELOPER`; password tersimpan tidak diubah.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, dan `SMTP_FROM` — konfigurasi email untuk lupa password.
 - `FRONTEND_URL` — URL frontend yang dipakai pada tautan reset password, misalnya `https://nama-aplikasi.vercel.app`.
-- `CORS_ORIGINS` — daftar origin frontend yang diizinkan, dipisahkan koma jika lebih dari satu, misalnya `https://nama-aplikasi.vercel.app`. Harus cocok persis dengan origin frontend.
-- `DEVICE_API_KEY` — kunci untuk menerima telemetry ESP32.
+- `CORS_ORIGINS` — daftar origin frontend yang diizinkan, dipisahkan koma. `https://smart-powerr.vercel.app` selalu diizinkan oleh konfigurasi backend.
+- `DEVICE_API_KEY` — kunci kompatibilitas untuk perangkat lama. Perangkat baru mendapat API key sendiri saat dibuat melalui `POST /api/devices`.
 - `NODE_ENV=production` — menandai deployment production dan menonaktifkan seed demo.
 
 `PORT` disediakan oleh Railway. `SMTP_PORT` biasanya `587` atau `465`. Jangan commit secret atau file `.env` ke repository.
@@ -44,4 +44,4 @@ Konfigurasikan variabel berikut di Railway sebelum deploy:
 - [Integrasi ESP32](docs/ESP32_INTEGRATION.md)
 - [Deployment Railway](docs/DEPLOY_RAILWAY.md)
 
-Endpoint utama mencakup login JWT, POST readings dengan `x-api-key`, readings terbaru/riwayat, cost summary, settings, notifications, dan status device. Endpoint kompatibilitas dashboard lama tetap tersedia agar frontend saat ini dapat bermigrasi bertahap.
+Endpoint utama mencakup `GET/POST /api/devices` (daftar perangkat dan pendaftaran khusus DEVELOPER), `POST /api/readings` (telemetry dengan header `x-api-key`), `GET /api/telemetry/:deviceId` (data terbaru dan riwayat khusus pemilik), readings terbaru/riwayat, cost summary, settings, notifications, dan status device. Setelah menambah migrasi, jalankan `npm run migrate` sebelum memakai endpoint baru.

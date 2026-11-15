@@ -5,13 +5,13 @@ import { env } from "../config/env.js";
 import { login, register, requestPasswordReset, resetPassword } from "../services/authService.js";
 import { HttpError } from "../utils/errors.js";
 import { requireAuth } from "../middleware/auth.js";
+import { query } from "../db/pool.js";
 
 export const authRoutes = Router();
 const forgotPasswordLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: "draft-8", legacyHeaders: false, message: { error: "Terlalu banyak permintaan reset password. Coba lagi nanti." } });
 const registerLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: "draft-8", legacyHeaders: false, message: { error: "Terlalu banyak percobaan pendaftaran. Coba lagi nanti." } });
 authRoutes.get("/me", requireAuth, (request, response, next) => {
-  try { if (!request.user) throw new HttpError(401, "Sesi pengguna tidak ditemukan"); response.json({ user: request.user }); }
-  catch (error) { next(error); }
+  void (async () => { try { if (!request.user) throw new HttpError(401, "Sesi pengguna tidak ditemukan"); const result = await query("SELECT id, name, email, role FROM users WHERE id=$1", [request.user.id]); if (!result.rows[0]) throw new HttpError(401, "Akun tidak ditemukan"); response.json({ user: result.rows[0] }); } catch (error) { next(error); } })();
 });
 authRoutes.post("/forgot-password", forgotPasswordLimiter, async (request, response, next) => {
   try {

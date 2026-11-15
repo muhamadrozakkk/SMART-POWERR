@@ -43,6 +43,13 @@ adminRoutes.post("/devices/:deviceId/reset-token", async (request, response, nex
   } catch (error) { next(error); }
 });
 
+adminRoutes.get("/devices", async (_request, response, next) => {
+  try {
+    const result = await query("SELECT d.device_id,d.name,d.location,d.last_seen,s.user_id,u.name AS owner_name,u.email AS owner_email FROM devices d LEFT JOIN settings s ON s.device_id=d.device_id LEFT JOIN users u ON u.id=s.user_id ORDER BY d.created_at DESC");
+    response.json({ data: result.rows });
+  } catch (error) { next(error); }
+});
+
 adminRoutes.put("/devices/:deviceId/owner", async (request, response, next) => {
   try {
     const deviceId = String(request.params.deviceId);

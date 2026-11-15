@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, ChevronDown, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { OnlineBadge } from "@/components/ui/StatusBadge";
+import { apiRequest } from "@/lib/api";
 
 export function Header({ onMenu }: { onMenu: () => void }) {
   const router = useRouter();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [name, setName] = useState("");
+
+  useEffect(() => { let active = true; void apiRequest<{ user: { name: string } }>("/api/auth/me").then(({ user }) => { if (active) setName(user.name); }).catch(() => { if (active) setName(""); }); return () => { active = false; }; }, []);
 
   function handleLogout() {
     document.cookie = "spw_demo_auth=; path=/; max-age=0";
@@ -18,7 +22,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
 
   return <header className="topbar">
     <button className="mobile-menu" onClick={onMenu} aria-label="Buka menu"><Menu size={22} /></button>
-    <div className="greeting"><h1>Selamat pagi, Rozak! <span>👋</span></h1><p>Ringkasan monitoring energi listrik secara real-time</p></div>
+    <div className="greeting"><h1>Selamat pagi{name ? `, ${name}` : ""}! <span>👋</span></h1><p>Ringkasan monitoring energi listrik secara real-time</p></div>
     <div className="topbar-actions">
       <OnlineBadge />
       <div className="header-menu-wrap">
@@ -26,7 +30,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
         {notificationsOpen ? <div className="header-popover notification-popover"><strong>Notifikasi Sistem</strong><div className="notification-item"><span className="notification-dot warning" /><div><b>Batas daya aman</b><small>Pemakaian masih dalam batas normal.</small></div></div><div className="notification-item"><span className="notification-dot online" /><div><b>Perangkat terhubung</b><small>ESP32-001 mengirim data terbaru.</small></div></div><button onClick={() => setNotificationsOpen(false)}>Tutup</button></div> : null}
       </div>
       <div className="header-menu-wrap">
-        <button className="profile-trigger" aria-label="Buka menu profil" aria-expanded={profileOpen} onClick={() => { setProfileOpen(!profileOpen); setNotificationsOpen(false); }}><div className="avatar">R</div><div className="profile-copy"><strong>Rozak</strong><span>Admin</span></div><ChevronDown size={17} /></button>
+        <button className="profile-trigger" aria-label="Buka menu profil" aria-expanded={profileOpen} onClick={() => { setProfileOpen(!profileOpen); setNotificationsOpen(false); }}><div className="avatar">{name.slice(0, 1).toUpperCase() || "?"}</div><div className="profile-copy"><strong>{name || "Akun"}</strong><span>SMART POWER</span></div><ChevronDown size={17} /></button>
         {profileOpen ? <div className="header-popover profile-popover"><button onClick={() => router.push("/profil")}>Profil saya</button><button onClick={handleLogout}>Keluar</button></div> : null}
       </div>
     </div>
