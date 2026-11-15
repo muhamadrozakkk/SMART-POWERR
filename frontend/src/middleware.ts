@@ -7,8 +7,8 @@ export function middleware(request: NextRequest) {
   const isDeveloperPath = pathname === "/dashboard/developer" || pathname.startsWith("/dashboard/developer/");
   const isUserPath = pathname === "/dashboard/user" || pathname.startsWith("/dashboard/user/");
   const requiresLogin = isDeveloperPath || isUserPath || protectedPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-  const isAuthenticated = request.cookies.get("spw_demo_auth")?.value === "1";
-  const role = request.cookies.get("spw_demo_role")?.value === "DEVELOPER" ? "DEVELOPER" : "USER";
+  const isAuthenticated = request.cookies.get("spw_auth")?.value === "1";
+  const role = request.cookies.get("spw_role")?.value === "DEVELOPER" ? "DEVELOPER" : "USER";
 
   if (requiresLogin && !isAuthenticated) {
     const landingUrl = request.nextUrl.clone();

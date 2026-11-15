@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, type ApiDeviceStatus, type ApiNotification, type CostSummary, type Reading, toDeviceStatus, ApiRequestError } from "@/lib/api";
-import { energyMetrics } from "@/data/dummyData";
-import type { PowerReading } from "@/types/energy";
+import type { EnergyReading, PowerReading } from "@/types/energy";
 import { AlarmStatus } from "@/components/dashboard/AlarmStatus";
 import { CostSummary as CostSummaryCard } from "@/components/dashboard/CostSummary";
 import { DataHistory } from "@/components/dashboard/DataHistory";
@@ -56,14 +55,15 @@ export function DashboardView() {
   if (error && !device) return <div className="empty-state"><strong>Dashboard menunggu perangkat</strong><span>{error}. Setelah ESP32 mengirim payload, tautkan device ke akun ini dari Dashboard Developer.</span><button className="secondary-button" onClick={() => void load()}>Coba lagi</button></div>;
   const current = latest ?? { voltage: 0, current: 0, power: 0, energy: 0, frequency: 0, power_factor: 0 } as Reading;
   const trend = (field: "power" | "current" | "voltage" | "power_factor" | "energy" | "frequency") => history.slice(-7).map((row) => row[field]);
-  const metricValues = [
-    { ...energyMetrics[0], value: String(current.power), trend: trend("power"), status: latest ? "Data sensor" : "Menunggu sensor", statusTone: "stable" as const },
-    { ...energyMetrics[1], value: String(current.current), trend: trend("current"), status: latest ? "Data sensor" : "Menunggu sensor", statusTone: "stable" as const },
-    { ...energyMetrics[2], value: String(current.voltage), trend: trend("voltage"), status: latest ? "Data sensor" : "Menunggu sensor", statusTone: "stable" as const },
-    { ...energyMetrics[3], value: String(current.power_factor), trend: trend("power_factor"), status: latest ? "Data sensor" : "Menunggu sensor", statusTone: "stable" as const },
-    { ...energyMetrics[4], value: String(cost?.today.energy_kwh ?? 0), trend: trend("energy"), status: `Rp ${(cost?.today.cost_rp ?? 0).toLocaleString("id-ID")}`, statusTone: "stable" as const },
-    { ...energyMetrics[1], label: "Frekuensi", value: String(current.frequency), unit: "Hz", icon: "wave", trend: trend("frequency"), status: latest ? "Data sensor" : "Menunggu sensor", statusTone: "stable" as const },
+  const metricInfo: Array<Pick<EnergyReading, "label" | "unit" | "icon" | "accent"> & { value: number; field: "power" | "current" | "voltage" | "power_factor" | "frequency" | "energy"; detail: string }> = [
+    { label: "Daya aktif", unit: "W", icon: "bolt", accent: "blue", value: current.power, field: "power", detail: "Pembacaan terbaru" },
+    { label: "Arus", unit: "A", icon: "current", accent: "sky", value: current.current, field: "current", detail: "Pembacaan terbaru" },
+    { label: "Tegangan", unit: "V", icon: "voltage", accent: "purple", value: current.voltage, field: "voltage", detail: "Pembacaan terbaru" },
+    { label: "Faktor daya", unit: "", icon: "wave", accent: "amber", value: current.power_factor, field: "power_factor", detail: "Pembacaan terbaru" },
+    { label: "Energi hari ini", unit: "kWh", icon: "energy", accent: "green", value: cost?.today.energy_kwh ?? 0, field: "energy", detail: `Rp ${(cost?.today.cost_rp ?? 0).toLocaleString("id-ID")}` },
+    { label: "Frekuensi", unit: "Hz", icon: "wave", accent: "blue", value: current.frequency, field: "frequency", detail: "Pembacaan terbaru" },
   ];
+  const metricValues = metricInfo.map((metric) => ({ ...metric, value: String(metric.value), trend: trend(metric.field), status: latest ? metric.detail : "Menunggu data sensor", statusTone: "stable" as const }));
   const chartData: PowerReading[] = history.map((row) => ({ time: new Date(row.timestamp).toLocaleString("id-ID", period === "day" ? { hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "short" }), power: row.power, energy: row.energy, current: row.current, voltage: row.voltage, cost: row.energy * (cost?.tariff_per_kwh ?? 0) }));
   return <div className="dashboard-grid">{devices.length > 0 && <label className="form-field" style={{ maxWidth: 420 }}><span>Pilih perangkat</span><select className="input-control" value={selectedDevice} onChange={(event) => setSelectedDevice(event.target.value)}>{devices.map((item) => <option key={item.device_id} value={item.device_id}>{item.name} · {item.device_id}</option>)}</select></label>}{!latest ? <p className="settings-status">Belum ada payload sensor. Angka di bawah bernilai nol sampai ESP32 mengirim pembacaan pertama.</p> : null}{error ? <p className="settings-status">{error}</p> : null}<div className="metrics-row">{metricValues.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</div><PowerChart data={chartData} period={period} onPeriodChange={setPeriod} /><div className="summary-row"><EnergySummary energyKwh={cost?.month.energy_kwh ?? 0} /><LiveCostCard value={cost?.today.cost_rp ?? 0} tariff={cost?.tariff_per_kwh ?? 0} /><CostSummaryCard summary={{ title: "Estimasi Biaya Bulan Ini", value: `Rp ${(cost?.month.cost_rp ?? 0).toLocaleString("id-ID")}`, detail: `${(cost?.month.energy_kwh ?? 0).toFixed(2)} kWh tercatat`, tone: "green" }} /><DeviceStatus deviceStatus={device ? toDeviceStatus(device) : undefined} /><AlarmStatus alarms={alarms} /></div><DataHistory readings={history.slice(-5)} tariffPerKwh={cost?.tariff_per_kwh ?? 0} /></div>;
 }

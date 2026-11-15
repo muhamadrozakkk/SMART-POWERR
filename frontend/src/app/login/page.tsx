@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Bolt, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, Bolt, Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 
@@ -29,8 +29,8 @@ export default function LoginPage() {
       });
       if (result.token) window.localStorage.setItem("spw_access_token", result.token);
       const role = result.user?.role ?? "USER";
-      document.cookie = "spw_demo_auth=1; path=/; max-age=28800; samesite=lax";
-      document.cookie = `spw_demo_role=${role}; path=/; max-age=28800; samesite=lax`;
+      document.cookie = "spw_auth=1; path=/; max-age=28800; samesite=lax";
+      document.cookie = `spw_role=${role}; path=/; max-age=28800; samesite=lax`;
       router.push(role === "DEVELOPER" ? "/dashboard/developer" : "/dashboard/user");
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Tidak dapat menghubungi server. Coba lagi.");
@@ -62,12 +62,12 @@ export default function LoginPage() {
           <div className="login-input"><Mail size={17} /><input id="email" type="email" autoComplete="email" placeholder="nama@email.com" value={email} onChange={(event) => setEmail(event.target.value)} required /></div>
           <label htmlFor="password">Password</label>
           <div className="login-input"><LockKeyhole size={17} /><input id="password" type={showPassword ? "text" : "password"} autoComplete={isRegister ? "new-password" : "current-password"} placeholder={isRegister ? "Minimal 8 karakter" : "Masukkan password"} minLength={isRegister ? 8 : undefined} value={password} onChange={(event) => setPassword(event.target.value)} required /><button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div>
-          {!isRegister && <div className="login-options"><label><input type="checkbox" /> Ingat saya</label><Link href="/forgot-password">Lupa password?</Link></div>}
+          {!isRegister && <div className="login-options"><Link href="/forgot-password">Lupa password?</Link></div>}
           {error ? <p className="login-error" role="alert">{error}</p> : null}
           <button type="submit" className="login-submit" disabled={loading}>{loading ? "Memproses..." : isRegister ? "Buat Akun" : "Masuk ke Dashboard"}</button>
         </form>
         <p className="login-switch">{isRegister ? "Sudah punya akun?" : "Belum punya akun?"} <button type="button" onClick={switchMode}>{isRegister ? "Masuk" : "Daftar sekarang"}</button></p>
-        {!isRegister && <div className="login-demo-note"><ShieldCheck size={16} /><span>Mode demo menggunakan data simulasi untuk mencoba dashboard.</span></div>}
+        {!isRegister && <p className="login-info">SMART POWER siap digunakan. Masuk untuk melihat data perangkat dan riwayat pemakaian yang terhubung ke akun Anda.</p>}
       </section>
       <p className="login-footer">© 2026 SMART POWER WEB</p>
     </main>

@@ -13,8 +13,8 @@ export function StatusBadge({ children, tone = "normal", dot = true }: { childre
   return <span className={`status-badge ${toneMap[tone]}`}>{dot ? <span className="status-dot" /> : null}{children}</span>;
 }
 
-export function OnlineBadge({ children = "Online" }: { children?: React.ReactNode }) {
-  return <span className="online-badge"><Wifi size={13} />{children}</span>;
+export function OnlineBadge({ children = "Online", online = true }: { children?: React.ReactNode; online?: boolean }) {
+  return <span className={`online-badge ${online ? "online-badge-active" : "online-badge-inactive"}`}><Wifi size={13} />{children}</span>;
 }
 
 export function SeverityBadge({ severity }: { severity: "low" | "medium" | "high" }) {
