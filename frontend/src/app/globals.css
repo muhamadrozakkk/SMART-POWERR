@@ -191,6 +191,9 @@ html, body { width: 100%; min-width: 0; overflow-x: hidden; overflow-y: auto; }
 .notification-empty { margin: 4px 0; color: #a9bdd4; font-size: 12px; line-height: 1.5; }
 .notification-item > div { min-width: 0; }
 .notification-item b { line-height: 1.4; }
+.profile-edit-form { display: flex; align-items: flex-end; gap: 12px; margin: 18px 0 6px; }
+.profile-edit-form .form-field { flex: 1 1 auto; }
+.profile-edit-form .primary-button { min-height: 41px; white-space: nowrap; }
 .online-badge-inactive svg { color: #9aacc0; }
 .filters > *, .form-grid > *, .form-field, .input-control { min-width: 0; max-width: 100%; }
 .filters label { display: flex; flex: 1 1 190px; flex-direction: column; gap: 7px; color: #dce7f3; font-size: 12px; }
@@ -214,6 +217,7 @@ html, body { width: 100%; min-width: 0; overflow-x: hidden; overflow-y: auto; }
   .alarm-item > div:nth-child(2) { flex-basis: calc(100% - 50px); }
   .alarm-item > .status-badge, .alarm-item > button { margin-left: 47px; }
   .page-heading-action { flex-wrap: wrap; }
+  .profile-edit-form { align-items: stretch; flex-direction: column; }
 }
 @media (max-width: 420px) {
   .topbar { padding-left: 10px; padding-right: 10px; }

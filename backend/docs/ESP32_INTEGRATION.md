@@ -1,6 +1,6 @@
 # Integrasi ESP32 + PZEM-004T
 
-Daftarkan perangkat dari Dashboard Developer. Salin `device_id` dan API key yang ditampilkan satu kali. ESP32 mengirim pembacaan setiap 5 detik ke `POST https://<domain>/api/readings` dengan header `x-api-key: <API_KEY_PERANGKAT>`. API key tidak dikirim dalam JSON.
+Daftarkan perangkat dari Dashboard Developer. Salin `device_id` dan API key yang ditampilkan satu kali, lalu tautkan perangkat ke akun pengguna. Firmware ESP32 pada [`firmware/esp32_smartpower/esp32_smartpower.ino`](../../firmware/esp32_smartpower/esp32_smartpower.ino) mengirim enam nilai PZEM setiap 5 detik ke Railway `POST /api/readings` menggunakan header `x-api-key: <API_KEY_PERANGKAT>`. API key tidak dikirim di JSON.
 
 Contoh payload:
 
@@ -17,32 +17,16 @@ Contoh payload:
 }
 ```
 
-Contoh alur Arduino:
+## Memasang firmware
 
-```cpp
-#include <WiFiClientSecure.h>
-#include <HTTPClient.h>
-#include <ArduinoJson.h>
+1. Buka folder `firmware/esp32_smartpower` sebagai sketch Arduino IDE.
+2. Pasang library ArduinoJson dan PZEM004Tv30 melalui Library Manager.
+3. Isi SSID/password Wi-Fi, Device ID, dan API key dari Dashboard Developer di bagian konfigurasi atas sketch.
+4. Periksa pin UART PZEM. Sketch menggunakan RX GPIO 16 dan TX GPIO 17 sebagai nilai awal; ubah sesuai kabel alat Anda.
+5. Pilih board dan port ESP32, unggah sketch, lalu buka Serial Monitor pada 115200 baud.
 
-WiFiClientSecure client;
-HTTPClient http;
-client.setInsecure(); // prototipe saja; versi akhir wajib memasang sertifikat root
-http.begin(client, API_URL);
-http.addHeader("Content-Type", "application/json");
-http.addHeader("x-api-key", DEVICE_API_KEY); // API key unik yang dibuat di Dashboard Developer
+Sketch memvalidasi HTTPS dengan sertifikat root ISRG Root X2 dan menyinkronkan jam lewat NTP sebelum mengirim. Railway dapat mengganti rantai sertifikat; jika sertifikat backend berubah, perbarui root CA dari [daftar sertifikat resmi Let's Encrypt](https://letsencrypt.org/certificates/).
 
-StaticJsonDocument<384> doc;
-doc["device_id"] = DEVICE_ID; // ID yang dibuat di Dashboard Developer
-doc["voltage"] = pzem.voltage();
-doc["current"] = pzem.current();
-doc["power"] = pzem.power();
-doc["energy"] = pzem.energy();
-doc["frequency"] = pzem.frequency();
-doc["power_factor"] = pzem.pf();
-String payload;
-serializeJson(doc, payload);
-http.POST(payload);
-http.end();
-```
+Jika backend menjawab `401`, periksa API key di header. `404 Device ID belum terdaftar` berarti ID belum dibuat lewat Dashboard Developer atau tidak sama dengan ID pada payload. Setelah `200`, periksa status perangkat dan nilai sensor di dashboard.
 
-LCD tetap dapat menampilkan data terakhir secara lokal ketika Wi-Fi atau backend tidak tersedia. Jangan menaruh API key di repository publik.
+LCD tetap dapat menampilkan data terakhir secara lokal ketika Wi-Fi atau backend tidak tersedia. Jangan commit SSID, password Wi-Fi, atau API key ke repository publik.

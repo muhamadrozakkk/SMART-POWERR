@@ -13,6 +13,15 @@ const registerLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standar
 authRoutes.get("/me", requireAuth, (request, response, next) => {
   void (async () => { try { if (!request.user) throw new HttpError(401, "Sesi pengguna tidak ditemukan"); const result = await query("SELECT id, name, email, role FROM users WHERE id=$1", [request.user.id]); if (!result.rows[0]) throw new HttpError(401, "Akun tidak ditemukan"); response.json({ user: result.rows[0] }); } catch (error) { next(error); } })();
 });
+authRoutes.patch("/me", requireAuth, async (request, response, next) => {
+  try {
+    const name = (request.body as { name?: unknown } | undefined)?.name;
+    if (typeof name !== "string" || !name.trim() || name.trim().length > 120) throw new HttpError(400, "Nama wajib diisi dan maksimal 120 karakter");
+    const result = await query("UPDATE users SET name=$2 WHERE id=$1 RETURNING id,name,email,role", [request.user?.id, name.trim()]);
+    if (!result.rows[0]) throw new HttpError(404, "Akun tidak ditemukan");
+    response.json({ user: result.rows[0], message: "Nama profil berhasil diperbarui." });
+  } catch (error) { next(error); }
+});
 authRoutes.post("/forgot-password", forgotPasswordLimiter, async (request, response, next) => {
   try {
     const { email } = request.body as { email?: unknown };

@@ -20,6 +20,8 @@ export function Header({ onMenu }: { onMenu: () => void }) {
 
   useEffect(() => {
     let active = true;
+    const updateProfile = (event: Event) => setUser((event as CustomEvent<HeaderUser>).detail);
+    window.addEventListener("spw:profile-updated", updateProfile);
     const refresh = async () => {
       const [userResult, deviceResult, notificationResult] = await Promise.allSettled([
         apiRequest<{ user: HeaderUser }>("/api/auth/me"),
@@ -38,7 +40,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
     };
     void refresh();
     const timer = window.setInterval(() => { if (!document.hidden) void refresh(); }, 30000);
-    return () => { active = false; window.clearInterval(timer); };
+    return () => { active = false; window.clearInterval(timer); window.removeEventListener("spw:profile-updated", updateProfile); };
   }, []);
 
   function handleLogout() {
