@@ -19,9 +19,10 @@ export function notificationLabel(type: ApiNotification["type"]) {
 
 export class ApiRequestError extends Error { constructor(message: string, public readonly status: number) { super(message); this.name = "ApiRequestError"; } }
 
-export const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000").replace(/\/$/, "");
+export const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!apiBaseUrl) throw new ApiRequestError("NEXT_PUBLIC_API_URL belum dikonfigurasi", 0);
   const token = typeof window !== "undefined" ? window.localStorage.getItem("spw_access_token") : null;
   const response = await fetch(`${apiBaseUrl}${path}`, { ...init, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) } });
   const payload = await response.json().catch(() => ({})) as T & { error?: string };
@@ -30,5 +31,5 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   return payload;
 }
 
-export function isApiConfigured() { return Boolean(process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_URL); }
+export function isApiConfigured() { return Boolean(process.env.NEXT_PUBLIC_API_URL); }
 export function toDeviceStatus(status: ApiDeviceStatus): DeviceStatus { return { name: status.name, deviceId: status.device_id, online: status.is_online, lastUpdate: status.last_seen ? new Date(status.last_seen).toLocaleString("id-ID") : "Belum ada data", wifi: status.is_online ? "Terhubung" : "Terputus", sensor: "PZEM-004T", lcd: status.is_online ? "Aktif" : "Tidak aktif" }; }

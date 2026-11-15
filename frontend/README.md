@@ -12,8 +12,6 @@ Frontend memakai kontrak API backend dengan field `snake_case`. Semua request da
 
 ## Environment
 
-- `NEXT_PUBLIC_API_BASE_URL` — URL backend, contoh `http://localhost:4000` atau URL Railway.
-- `NEXT_PUBLIC_USE_MOCK=true` — memakai data simulasi dengan bentuk respons yang sama seperti backend.
-- `NEXT_PUBLIC_USE_MOCK=false` — memakai backend nyata.
+- `NEXT_PUBLIC_API_URL` — URL backend, untuk production `https://smartpower-production.up.railway.app`.
 
-Untuk deploy Vercel, isi `NEXT_PUBLIC_API_BASE_URL` dengan URL Railway dan gunakan `NEXT_PUBLIC_USE_MOCK=false`, lalu redeploy.
+Frontend ini tidak memakai fallback localhost atau data simulasi untuk dashboard. Untuk deploy Vercel, isi `NEXT_PUBLIC_API_URL` dengan URL Railway lalu redeploy.

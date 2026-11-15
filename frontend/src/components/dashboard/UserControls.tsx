@@ -25,14 +25,14 @@ export function UserControls() {
     let active = true;
     const load = async () => {
       try {
-        const [config, reading] = await Promise.all([apiRequest<Settings>("/api/settings"), apiRequest<Reading>("/api/readings/latest")]);
+        const [config, reading] = await Promise.all([apiRequest<Settings>("/api/settings"), apiRequest<Reading>("/api/telemetry/latest")]);
         if (!active) return;
         setSettings(config); setLatest(reading); setLimit(String(config.power_limit_w)); setCurrentLimit(String(config.max_current_limit_a));
         setSelected(tariffs.find((item) => item.id === config.tariff_class) ?? tariffs[2]);
         setNotice("");
       } catch (error) { if (active) setNotice(error instanceof Error ? error.message : "Pengaturan pengguna gagal dimuat"); }
     };
-    void load(); const timer = window.setInterval(() => { if (!document.hidden) void apiRequest<Reading>("/api/readings/latest").then((reading) => { if (active) setLatest(reading); }).catch(() => undefined); }, 5000);
+    void load(); const timer = window.setInterval(() => { if (!document.hidden) void apiRequest<Reading>("/api/telemetry/latest").then((reading) => { if (active) setLatest(reading); }).catch(() => undefined); }, 5000);
     return () => { active = false; window.clearInterval(timer); };
   }, []);
 

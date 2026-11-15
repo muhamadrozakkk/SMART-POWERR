@@ -22,8 +22,8 @@ Konfigurasikan variabel berikut di Railway sebelum deploy:
 - `JWT_SECRET` — secret acak yang kuat untuk menandatangani token sesi.
 - `DEVELOPER_EMAIL` dan `DEVELOPER_PASSWORD` — kredensial akun developer yang dibuat saat backend mulai. Password harus minimal 12 karakter. Jika salah satu kosong atau password terlalu pendek, pembuatan akun developer dilewati dengan peringatan. Jika email sudah terdaftar, backend hanya memastikan role menjadi `DEVELOPER`; password tersimpan tidak diubah.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, dan `SMTP_FROM` — konfigurasi email untuk lupa password.
-- `FRONTEND_URL` — URL frontend yang dipakai pada tautan reset password, misalnya `https://nama-aplikasi.vercel.app`.
-- `CORS_ORIGINS` — daftar origin frontend yang diizinkan, dipisahkan koma. `https://smart-powerr.vercel.app` selalu diizinkan oleh konfigurasi backend.
+- `FRONTEND_URL` — URL frontend untuk tautan reset password, misalnya `https://www.smartpower.web.id`.
+- CORS hanya mengizinkan `https://www.smartpower.web.id` dan `https://smartpower.web.id`; konfigurasi ini tidak membutuhkan `CORS_ORIGINS`.
 - `DEVICE_API_KEY` — kunci kompatibilitas untuk perangkat lama. Perangkat baru mendapat API key sendiri saat dibuat melalui `POST /api/devices`.
 - `NODE_ENV=production` — menandai deployment production dan menonaktifkan seed demo.
 
@@ -44,4 +44,4 @@ Konfigurasikan variabel berikut di Railway sebelum deploy:
 - [Integrasi ESP32](docs/ESP32_INTEGRATION.md)
 - [Deployment Railway](docs/DEPLOY_RAILWAY.md)
 
-Endpoint utama mencakup `GET/POST /api/devices` (daftar perangkat dan pendaftaran khusus DEVELOPER), `POST /api/readings` (telemetry dengan header `x-api-key`), `GET /api/telemetry/:deviceId` (data terbaru dan riwayat khusus pemilik), readings terbaru/riwayat, cost summary, settings, notifications, dan status device. Setelah menambah migrasi, jalankan `npm run migrate` sebelum memakai endpoint baru.
+Endpoint utama mencakup `GET/POST /api/devices` (daftar perangkat dan pendaftaran khusus DEVELOPER), `POST /api/telemetry` (serta alias kompatibilitas `POST /api/readings`) dengan header `x-api-key`, `GET /api/telemetry/latest` dan `GET /api/telemetry/history` (khusus pemilik yang login), cost summary, settings, notifications, dan status device. Payload telemetry disimpan ke tabel PostgreSQL `readings` dengan timestamp server. Setelah menambah migrasi, jalankan `npm run migrate` sebelum memakai endpoint baru.

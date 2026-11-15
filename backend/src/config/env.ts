@@ -1,20 +1,18 @@
 import "dotenv/config";
 
-const csv = (value: string | undefined, fallback: string) => (value ?? fallback).split(",").map((item) => item.trim()).filter(Boolean);
-
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 4000),
   databaseUrl: process.env.DATABASE_URL ?? "",
   deviceApiKey: process.env.DEVICE_API_KEY ?? "",
   jwtSecret: process.env.JWT_SECRET ?? "",
-  corsOrigins: [...new Set([...csv(process.env.CORS_ORIGINS, ""), process.env.FRONTEND_URL, "http://localhost:3000", "https://smart-powerr.vercel.app"].filter((origin): origin is string => Boolean(origin?.trim())).map((origin) => origin.trim().replace(/\/$/, "")))],
+  corsOrigins: ["https://www.smartpower.web.id", "https://smartpower.web.id"],
   timezone: process.env.TZ ?? "Asia/Jakarta",
   developerEmail: process.env.DEVELOPER_EMAIL?.trim() ?? "",
   developerPassword: process.env.DEVELOPER_PASSWORD ?? "",
   onlineThresholdSeconds: Number(process.env.ONLINE_THRESHOLD_SECONDS ?? 60),
   notificationCooldownSeconds: Number(process.env.NOTIFICATION_COOLDOWN_SECONDS ?? 600),
-  frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:3000",
+  frontendUrl: process.env.FRONTEND_URL ?? "https://www.smartpower.web.id",
   smtpHost: process.env.SMTP_HOST ?? "",
   smtpPort: Number(process.env.SMTP_PORT ?? 587),
   smtpUser: process.env.SMTP_USER ?? "",

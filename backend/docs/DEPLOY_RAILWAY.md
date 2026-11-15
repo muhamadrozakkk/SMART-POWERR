@@ -1,50 +1,52 @@
-# Deploy backend ke Railway
+# Deploy SMARTPOWER ke Railway dan Vercel
 
-1. Buat project Railway dan tambahkan service PostgreSQL.
-2. Tambahkan service dari repository ini dengan root directory `backend`.
-3. Set environment variables:
+Workspace ini monorepo: `backend/` adalah Express + TypeScript + PostgreSQL; `frontend/` adalah Next.js; `firmware/` berisi sketch ESP32.
+
+## Railway backend
+
+Atur root directory service ke `backend` dan tambahkan PostgreSQL. Isi variabel berikut pada service backend:
 
 ```env
 NODE_ENV=production
-DATABASE_URL=<Railway menyediakan ini dari PostgreSQL>
-DEVICE_API_KEY=<random-secret-untuk-ESP32>
-JWT_SECRET=<random-secret-untuk-JWT>
-CORS_ORIGINS=https://frontend-two-sandy-90.vercel.app
-FRONTEND_URL=https://frontend-two-sandy-90.vercel.app
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+JWT_SECRET=<secret-acak-panjang>
+DEVELOPER_EMAIL=<email-admin>
+DEVELOPER_PASSWORD=<password-awal-minimal-12-karakter>
+DEVICE_API_KEY=<secret-acak-panjang-untuk-key-global-opsional>
+FRONTEND_URL=https://www.smartpower.web.id
+```
+
+Ganti `Postgres` pada reference variable sesuai nama service PostgreSQL Railway. `PORT` diisi otomatis oleh Railway. CORS backend dibatasi di kode ke `https://www.smartpower.web.id` dan `https://smartpower.web.id`; `CORS_ORIGINS` tidak diperlukan. `FRONTEND_URL` dipakai untuk membuat tautan reset password.
+
+Set variabel SMTP berikut jika fitur lupa password harus mengirim email (tidak diperlukan agar ESP32 dapat mengirim telemetry):
+
+```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=<alamat-email-pengirim>
-SMTP_PASSWORD=<app-password-smtp>
-SMTP_FROM=SMART POWER WEB <alamat-email-pengirim>
-TZ=Asia/Jakarta
-DEMO_EMAIL=rozak@example.com
-DEMO_PASSWORD=<password-demo-yang-aman>
+SMTP_PASSWORD=<app-password-email>
+SMTP_FROM=<nama-dan-alamat-pengirim>
 ```
 
-4. Jalankan migration sekali setelah database tersedia, atau biarkan perintah `npm start` menjalankannya sebelum server mulai:
+`DEVELOPER_EMAIL` dan `DEVELOPER_PASSWORD` hanya membuat akun developer bootstrap bila belum ada. Jika email sudah ada, backend tidak mengubah passwordnya.
 
-```bash
-npm install
-npm run migrate
-npm run seed
-npm run build
-npm start
+## Vercel frontend
+
+Tambahkan variabel pada project Vercel lalu redeploy:
+
+```env
+NEXT_PUBLIC_API_URL=https://smartpower-production.up.railway.app
 ```
 
-5. Saat server mulai, akun Developer Utama otomatis dibuat jika belum ada:
+## Endpoint dan ESP32
 
-   - Email: `muhamad.rozak@students.untidar.ac.id`
-   - Password awal: `SMARPOWER123`
-   - Role: `DEVELOPER`
+- Kirim data: `POST https://smartpower-production.up.railway.app/api/telemetry`
+- Header: `Content-Type: application/json` dan `x-api-key: <API_KEY>`.
+- Data terbaru: `GET /api/telemetry/latest` (memerlukan bearer token login).
+- Histori: `GET /api/telemetry/history?from=<ISO-8601>&interval=hour` (memerlukan bearer token login; default 24 jam terakhir).
 
-   Ganti password awal melalui halaman lupa password setelah SMTP disetel.
+`DEVICE_API_KEY` mengizinkan key global yang sama. Perangkat yang didaftarkan di Dashboard Developer juga mendapat key unik yang bisa digunakan firmware tanpa `DEVICE_API_KEY`; keduanya diterima backend. Jangan simpan Wi-Fi atau API key dalam repo publik.
 
-6. Set health check Railway ke `/health`. Pastikan respons menunjukkan `database: connected`.
-7. Salin domain publik Railway ke Vercel sebagai `NEXT_PUBLIC_API_URL`.
-8. Uji ESP32 menggunakan simulator:
+Firmware siap upload: [`../../firmware/esp32_pzem_telemetry.ino`](../../firmware/esp32_pzem_telemetry.ino). Isi SSID, password Wi-Fi, Device ID, dan API key. Sketch membaca PZEM melalui UART2 (RX 16, TX 17), sinkronisasi waktu NTP, memvalidasi HTTPS, lalu mengirim setiap 5 detik.
 
-```bash
-DEVICE_API_KEY=... SIMULATOR_URL=https://domain-railway/api/readings npm run simulate:esp32 -- --once
-```
-
-Tarif pada seed masih `0` sebagai placeholder. Isi tarif hanya setelah diverifikasi dari sumber resmi PLN.
+Health check Railway: `/health`. Dashboard menandai perangkat online setelah pembacaan baru diterima; bila offline, cek Serial Monitor ESP32, koneksi Wi-Fi, HTTP status, Device ID, dan header API key. Jangan jalankan `npm run seed` di production.
