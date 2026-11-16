@@ -10,9 +10,7 @@
     "start": "node dist/db/migrate.js && node dist/server.js",
     "typecheck": "tsc --noEmit",
     "migrate": "tsx src/db/migrate.ts",
-    "seed": "tsx src/db/seed.ts",
-    "test": "tsx src/tests/run.ts",
-    "simulate:esp32": "tsx scripts/simulate-esp32.ts"
+    "test": "tsx src/tests/run.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
