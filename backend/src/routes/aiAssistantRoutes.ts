@@ -14,6 +14,7 @@ const assistantLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standa
 aiAssistantRoutes.use(requireAuth, assistantLimiter);
 
 type Language = "ID" | "EN";
+type ChatTurn = { role: "user" | "assistant"; content: string };
 type Context = {
   device: { id: string; online: boolean; lastSeen: string | null } | null;
   latest: { timestamp: string; voltage: number; current: number; power: number; energy: number; frequency: number; power_factor: number } | null;
@@ -49,6 +50,10 @@ async function loadContext(id: number): Promise<Context> {
 
 function localAnswer(message: string, language: Language, context: Context) {
   const question = message.toLowerCase();
+  if (/^(hai|halo|hello|hi|hey|pagi|siang|sore|malam|apa kabar)[!.?\s]*$/i.test(question)) return language === "EN" ? "Hello! I am PowerMate. I can help with general questions and your SMART POWER energy dashboard. What would you like to talk about?" : "Halo! Aku PowerMate. Aku bisa membantu pertanyaan umum maupun dashboard energi SMART POWER. Kamu ingin membahas apa?";
+  if (/\b(terima kasih|makasih|thanks|thank you|thx)\b/i.test(question)) return language === "EN" ? "You’re welcome! Feel free to ask me anything else." : "Sama-sama! Silakan tanya hal lain kapan saja.";
+  if (/\b(siapa kamu|who are you|namamu siapa)\b/i.test(question)) return language === "EN" ? "I am PowerMate, a general assistant built into SMART POWER WEB. I can chat about general topics and help interpret your energy dashboard." : "Aku PowerMate, asisten yang ada di SMART POWER WEB. Aku bisa membahas berbagai hal umum sekaligus membantu membaca dashboard energimu.";
+  if (/\b(cuaca|weather|berita terbaru|latest news|sekarang jam berapa)\b/i.test(question)) return language === "EN" ? "I do not have live internet access in this chat, so I cannot verify current information. I can still explain the topic generally if you tell me what you need." : "Aku tidak terhubung ke informasi internet langsung, jadi belum bisa memastikan info terkini. Kalau kamu jelaskan topiknya, aku tetap bisa membantu menjelaskan secara umum.";
   if (language === "EN") {
     if (question.includes("cost") || question.includes("tariff")) return `The selected tariff is ${context.tariff?.class ?? "not set"} at Rp ${context.tariff?.perKwh ?? 0}/kWh. Cost estimates are calculated from stored meter readings and are not an official PLN bill.`;
     if (question.includes("device") || question.includes("online")) return context.device ? `Your device is currently ${context.device.online ? "online" : "offline"}. The dashboard uses the latest real reading saved by this device.` : "No device is linked to this account yet. Ask the developer to link a device before monitoring readings.";
@@ -61,11 +66,16 @@ function localAnswer(message: string, language: Language, context: Context) {
   return "Aku bisa menjelaskan pembacaan energi, estimasi tarif, status perangkat, dan histori akunmu. Tanyakan salah satu topik itu agar aku bisa memakai data terbaru yang tersedia.";
 }
 
-async function generateAnswer(message: string, language: Language, context: Context): Promise<{ answer: string; provider: "openai-compatible" | "local" | "local-fallback" }> {
+function isAccountQuestion(message: string) {
+  return /smart.?power|perangkat|device|esp32|pzem|sensor|telemetri|telemetry|pembacaan|tegangan|voltage|arus|current|daya|power|energi|energy|kwh|tarif|tariff|biaya|cost|tagihan|history|histori|riwayat|notifikasi|notification|relay|watt|frekuensi|frequency|faktor daya|power factor/i.test(message);
+}
+
+async function generateAnswer(message: string, language: Language, context: Context, history: ChatTurn[]): Promise<{ answer: string; provider: "openai-compatible" | "local" | "local-fallback" }> {
   if (!env.aiApiKey) return { answer: localAnswer(message, language, context), provider: "local" };
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
+    const accountContext = isAccountQuestion(message) ? JSON.stringify(context) : "Tidak dikirim untuk pertanyaan umum.";
     const response = await fetch(env.aiApiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.aiApiKey}` },
@@ -75,8 +85,8 @@ async function generateAnswer(message: string, language: Language, context: Cont
         temperature: 0.4,
         max_tokens: 180,
         messages: [
-          { role: "system", content: `Kamu adalah asisten SMART POWER WEB. Jawab dengan hangat, ramah, sopan, dan ringkas, maksimal 2-3 kalimat. Jangan gunakan markdown, tanda pagar, atau tanda bintang. Bahasa jawaban: ${language === "EN" ? "English (en-US)" : "Bahasa Indonesia (id-ID)"}. Gunakan hanya konteks akun berikut; jangan mengarang angka, status, atau pembacaan. Jika data belum tersedia, katakan dengan jelas. Sensor hanya satu di jalur masuk, jadi jangan mengklaim dapat memantau peralatan satu per satu. Biaya adalah estimasi, bukan tagihan resmi. Konteks terbaru akun: ${JSON.stringify(context)}` },
-          { role: "user", content: message },
+          { role: "system", content: `Kamu adalah PowerMate, asisten umum yang ramah dan juga asisten SMART POWER WEB. Jawab pertanyaan umum dengan pengetahuanmu, bukan hanya topik listrik. Untuk pertanyaan tentang akun/perangkat SMARTPOWER, gunakan konteks akun yang diberikan dan jangan mengarang angka, status, atau pembacaan. Jika data akun belum tersedia, katakan dengan jelas. Sistem memakai satu sensor di jalur masuk, jadi jangan mengklaim dapat memantau alat satu per satu. Biaya adalah estimasi, bukan tagihan resmi. Jangan mengaku punya akses internet atau informasi langsung. Jawab hangat, jelas, maksimal 3 kalimat, tanpa markdown. Bahasa jawaban: ${language === "EN" ? "English (en-US)" : "Bahasa Indonesia (id-ID)"}. Konteks akun (hanya dikirim jika pertanyaan tentang SMARTPOWER): ${accountContext}` },
+          ...(history.length ? history.map((turn) => ({ role: turn.role, content: turn.content })) : [{ role: "user", content: message }]),
         ],
       }),
     });
@@ -93,11 +103,21 @@ async function generateAnswer(message: string, language: Language, context: Cont
 
 aiAssistantRoutes.post("/", async (request, response, next) => {
   try {
-    const body = request.body as { message?: unknown; language?: unknown };
+    const body = request.body as { message?: unknown; language?: unknown; history?: unknown };
     if (typeof body.message !== "string" || !body.message.trim() || body.message.length > 1000) throw new HttpError(400, "Pesan wajib diisi dan maksimal 1000 karakter");
     const language: Language = body.language === "EN" ? "EN" : "ID";
-    const context = await loadContext(userId(request));
-    const result = await generateAnswer(body.message.trim(), language, context);
+    const history: ChatTurn[] = Array.isArray(body.history) ? body.history.slice(-10).flatMap((item): ChatTurn[] => {
+      if (!item || typeof item !== "object") return [];
+      const turn = item as { role?: unknown; content?: unknown };
+      if ((turn.role !== "user" && turn.role !== "assistant") || typeof turn.content !== "string") return [];
+      const content = turn.content.trim().slice(0, 1000);
+      return content ? [{ role: turn.role, content }] : [];
+    }) : [];
+    const isSmartPowerQuestion = isAccountQuestion(body.message.trim());
+    const context: Context = isSmartPowerQuestion
+      ? await loadContext(userId(request))
+      : { device: null, latest: null, tariff: null, history24h: { count: 0, averagePowerW: 0, peakPowerW: 0, energyKwh: 0 }, unreadNotifications: 0 };
+    const result = await generateAnswer(body.message.trim(), language, context, history);
     response.json({ ...result, context });
   } catch (error) { next(error); }
 });

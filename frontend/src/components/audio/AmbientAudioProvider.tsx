@@ -20,27 +20,60 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
       const master = context.createGain();
       const filter = context.createBiquadFilter();
       filter.type = "lowpass";
-      filter.frequency.value = 420;
-      filter.Q.value = 0.55;
+      filter.frequency.value = 360;
+      filter.Q.value = 0.8;
       master.gain.value = 0;
       filter.connect(master);
       master.connect(context.destination);
-      for (const [frequency, level] of [[110, 0.5], [164.81, 0.28], [220, 0.12]] as const) {
+      const drone = context.createGain();
+      drone.gain.value = 0.24;
+      drone.connect(filter);
+      for (const [frequency, level, pan] of [[55, 0.36, -0.18], [82.41, 0.2, 0.18], [110, 0.1, 0]] as const) {
         const osc = context.createOscillator();
         const voiceGain = context.createGain();
+        const stereo = context.createStereoPanner();
         osc.type = "sine";
         osc.frequency.value = frequency;
         voiceGain.gain.value = level;
         osc.connect(voiceGain);
-        voiceGain.connect(filter);
+        voiceGain.connect(stereo);
+        stereo.pan.value = pan;
+        stereo.connect(drone);
         osc.start();
       }
+      const noiseBuffer = context.createBuffer(1, context.sampleRate * 3, context.sampleRate);
+      const noiseData = noiseBuffer.getChannelData(0);
+      let brown = 0;
+      for (let index = 0; index < noiseData.length; index += 1) {
+        brown = (brown + 0.018 * (Math.random() * 2 - 1)) / 1.018;
+        noiseData[index] = brown * 3.2;
+      }
+      const noise = context.createBufferSource();
+      const noiseFilter = context.createBiquadFilter();
+      const noiseGain = context.createGain();
+      noise.loop = true;
+      noise.buffer = noiseBuffer;
+      noiseFilter.type = "bandpass";
+      noiseFilter.frequency.value = 210;
+      noiseFilter.Q.value = 0.45;
+      noiseGain.gain.value = 0.13;
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(filter);
+      noise.start();
+      const slowLfo = context.createOscillator();
+      const lfoGain = context.createGain();
+      slowLfo.frequency.value = 0.055;
+      lfoGain.gain.value = 90;
+      slowLfo.connect(lfoGain);
+      lfoGain.connect(filter.frequency);
+      slowLfo.start();
       audioRef.current = context;
       gainRef.current = master;
     }
     await context.resume();
     const gain = gainRef.current;
-    if (gain) gain.gain.setTargetAtTime(duckedRef.current ? 0.008 : 0.05, context.currentTime, 0.7);
+    if (gain) gain.gain.setTargetAtTime(duckedRef.current ? 0.035 : 0.11, context.currentTime, 0.7);
   }, []);
 
   const toggle = useCallback(() => {
@@ -53,7 +86,7 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
 
   const setDucked = useCallback((ducked: boolean) => {
     duckedRef.current = ducked;
-    if (audioRef.current && gainRef.current && enabled) gainRef.current.gain.setTargetAtTime(ducked ? 0.008 : 0.05, audioRef.current.currentTime, 0.2);
+    if (audioRef.current && gainRef.current && enabled) gainRef.current.gain.setTargetAtTime(ducked ? 0.035 : 0.11, audioRef.current.currentTime, 0.2);
   }, [enabled]);
 
   useEffect(() => {

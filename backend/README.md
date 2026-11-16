@@ -22,9 +22,9 @@ Konfigurasikan variabel berikut di Railway sebelum deploy:
 - `JWT_SECRET` — secret acak yang kuat untuk menandatangani token sesi.
 - `DEVELOPER_EMAIL` dan `DEVELOPER_PASSWORD` — kredensial akun developer yang dibuat saat backend mulai. Password harus minimal 12 karakter. Jika salah satu kosong atau password terlalu pendek, pembuatan akun developer dilewati dengan peringatan. Jika email sudah terdaftar, backend hanya memastikan role menjadi `DEVELOPER`; password tersimpan tidak diubah.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, dan `SMTP_FROM` — konfigurasi email untuk lupa password.
-- `AI_API_KEY` — opsional, API key provider yang kompatibel dengan format OpenAI Chat Completions. Tanpa key, endpoint asisten memakai jawaban panduan kontekstual lokal.
-- `AI_API_URL` — URL endpoint chat completions provider (default `https://api.openai.com/v1/chat/completions`).
-- `AI_MODEL` — nama model provider (default `gpt-4o-mini`).
+- `AI_API_KEY` — opsional, API key provider yang kompatibel dengan format OpenAI Chat Completions. Untuk Gemini API, buat key di Google AI Studio. Tanpa key, endpoint asisten memakai jawaban panduan lokal.
+- `AI_API_URL` — URL endpoint chat completions (default Gemini OpenAI compatibility: `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`).
+- `AI_MODEL` — nama model (default `gemini-3.5-flash-lite`). Free tier memiliki kuota dan rate limit dari provider. Jika provider gagal/kuota habis, endpoint beralih ke jawaban lokal kontekstual.
 - `FRONTEND_URL` — URL frontend untuk tautan reset password, misalnya `https://www.smartpower.web.id`.
 - CORS hanya mengizinkan `https://www.smartpower.web.id` dan `https://smartpower.web.id`; konfigurasi ini tidak membutuhkan `CORS_ORIGINS`.
 - `DEVICE_API_KEY` — kunci kompatibilitas untuk perangkat lama. Perangkat baru mendapat API key sendiri saat dibuat melalui `POST /api/devices`.

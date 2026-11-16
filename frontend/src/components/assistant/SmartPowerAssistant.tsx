@@ -41,9 +41,9 @@ export function SmartPowerAssistant() {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = locale === "EN" ? "en-US" : "id-ID";
-    utterance.pitch = 1.25;
-    utterance.rate = 0.96;
-    utterance.volume = 0.95;
+    utterance.pitch = 1.12;
+    utterance.rate = 0.94;
+    utterance.volume = 1;
     const voices = window.speechSynthesis.getVoices();
     const languageVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith(locale === "EN" ? "en" : "id"));
     utterance.voice = languageVoices.find((voice) => /female|woman|gadis|google.*bahasa|indonesia.*female/i.test(voice.name)) ?? languageVoices[0] ?? null;
@@ -96,14 +96,15 @@ export function SmartPowerAssistant() {
     setError("");
     setLoading(true);
     try {
-      const result = await apiRequest<{ answer: string }>("/api/ai-assistant", { method: "POST", body: JSON.stringify({ message, language: locale, context }) });
+      const history = [...messages.filter((item) => item.id !== 0).map(({ role, text }) => ({ role, content: text })), { role: "user" as const, content: message }].slice(-10);
+      const result = await apiRequest<{ answer: string; provider?: string }>("/api/ai-assistant", { method: "POST", body: JSON.stringify({ message, language: locale, context, history }) });
       const answer: Message = { id: ++nextId.current, role: "assistant", text: result.answer };
       setMessages((current) => [...current, answer]);
       speak(answer.text);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : (locale === "EN" ? "The assistant could not respond." : "Asisten belum dapat menjawab."));
     } finally { setLoading(false); }
-  }, [assistantGreeting, context, loading, locale, speak]);
+  }, [assistantGreeting, context, loading, locale, messages, speak]);
 
   const close = () => { stopVoice(); window.speechSynthesis?.cancel(); setOpen(false); };
   const suggestions = locale === "EN" ? ["What is my latest power reading?", "How is my estimated cost calculated?", "Is my device online?"] : ["Berapa daya terbaru saya?", "Bagaimana estimasi biaya dihitung?", "Apakah perangkat saya online?"];

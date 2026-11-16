@@ -19,8 +19,8 @@ export const env = {
   smtpPassword: process.env.SMTP_PASSWORD ?? "",
   smtpFrom: process.env.SMTP_FROM ?? process.env.SMTP_USER ?? "",
   aiApiKey: process.env.AI_API_KEY ?? "",
-  aiApiUrl: process.env.AI_API_URL ?? "https://api.openai.com/v1/chat/completions",
-  aiModel: process.env.AI_MODEL ?? "gpt-4o-mini",
+  aiApiUrl: process.env.AI_API_URL ?? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+  aiModel: process.env.AI_MODEL ?? "gemini-3.5-flash-lite",
 };
 
 export function requireConfig(name: "DATABASE_URL" | "DEVICE_API_KEY" | "JWT_SECRET") {
