@@ -1,6 +1,9 @@
+"use client";
+
 import { Activity, BatteryCharging, Bolt, Gauge, Waves } from "lucide-react";
 import type { EnergyReading } from "@/types/energy";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useI18n } from "@/lib/i18n";
 
 const iconMap = { bolt: Bolt, current: Activity, voltage: Gauge, wave: Waves, energy: BatteryCharging };
 const accentMap: Record<string, { icon: string; line: string }> = {
@@ -15,7 +18,8 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 }
 
 export function MetricCard({ metric }: { metric: EnergyReading }) {
+  const { t } = useI18n();
   const Icon = iconMap[metric.icon as keyof typeof iconMap] ?? Bolt;
   const accent = accentMap[metric.accent];
-  return <article className="metric-card"><div className={`metric-icon ${accent.icon}`}><Icon size={25} /></div><div className="metric-content"><span className="metric-label">{metric.label}</span><div className="metric-value">{metric.value} <small>{metric.unit}</small></div><StatusBadge tone={metric.statusTone}>{metric.status}</StatusBadge></div><Sparkline values={metric.trend} color={accent.line} /></article>;
+  return <article className="metric-card"><div className={`metric-icon ${accent.icon}`}><Icon size={25} /></div><div className="metric-content"><span className="metric-label">{t(metric.label)}</span><div className="metric-value">{metric.value} <small>{metric.unit}</small></div><StatusBadge tone={metric.statusTone}>{t(metric.status)}</StatusBadge></div><Sparkline values={metric.trend} color={accent.line} /></article>;
 }

@@ -1,9 +1,13 @@
+"use client";
+
 import Link from "next/link";
 import { Activity, ArrowRight, BarChart3, Bolt, CheckCircle2, CircleDollarSign, Gauge, Radio, ShieldCheck } from "lucide-react";
 import { FeatureCard } from "@/components/landing/FeatureCard";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { LandingPreview } from "@/components/landing/LandingPreview";
+import { LandingAssistant } from "@/components/landing/LandingAssistant";
+import { useI18n } from "@/lib/i18n";
 
 const featureCards = [
   { icon: Bolt, tone: "blue", title: "Monitoring enam parameter", copy: "Lihat tegangan, arus, daya, energi, frekuensi, dan faktor daya dari satu sensor di jalur masuk." },
@@ -24,11 +28,12 @@ const steps = [
 ];
 
 export default function LandingPage() {
+  const { t } = useI18n();
   return <div className="landing-page"><LandingHeader /><main>
-    <section className="landing-hero" id="beranda"><div className="hero-copy"><div className="hero-eyebrow"><Bolt size={14} fill="currentColor" />Sistem Manajemen Energi Listrik</div><h1>Pahami Energi,<br /><span>Kelola Biaya</span></h1><p>SMART POWER WEB menghubungkan satu sensor pada jalur masuk rumah dengan dashboard untuk memantau parameter listrik, meninjau histori, dan memperkirakan biaya.</p><div className="hero-actions"><Link href="/login" className="hero-primary">Masuk ke dashboard <ArrowRight size={18} /></Link><Link href="#cara-kerja" className="hero-secondary">Lihat cara kerja</Link></div><div className="hero-benefits"><span><CheckCircle2 size={16} />Satu meter di jalur masuk</span><span><ShieldCheck size={16} />Data dari perangkat</span><span><Gauge size={16} />LCD dan website</span></div></div><LandingPreview /></section>
-    <section className="feature-section" id="fitur"><div className="feature-intro"><span className="section-kicker">FITUR UTAMA</span><h2>Informasi energi<br /><span>di satu platform</span></h2><p>Ringkasan dihitung dari sensor di sisi masuk, bukan dari pemantauan per peralatan.</p></div><div className="feature-grid">{featureCards.map((feature) => <FeatureCard key={feature.title} {...feature} />)}</div></section>
-    <section className="how-it-works" id="cara-kerja"><span className="section-kicker">CARA KERJA SISTEM</span><h2>Dari sensor ke dashboard</h2><p className="how-intro">LCD tetap menampilkan pembacaan lokal. Koneksi internet diperlukan untuk mengirim dan melihat data melalui web.</p><ol>{steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, "0")}</span><p>{step}</p></li>)}</ol></section>
-    <section className="project-summary" id="tentang"><div><span className="section-kicker">TENTANG PROYEK</span><h2>Monitoring rumah tangga dari satu titik ukur</h2><p>Proyek ini mengembangkan prototipe ESP32, PZEM-004T, dan LCD menjadi platform website dengan histori, analisis pola konsumsi, estimasi biaya tarif, dan notifikasi.</p><p>Karena sensor berada pada jalur masuk, dashboard menyajikan konsumsi total rumah. Sistem tidak mengidentifikasi pemakaian tiap alat.</p></div><Link href="/tentang" className="inline-link">Tentang tim dan proyek <ArrowRight size={14} /></Link></section>
-    <section className="landing-contact" id="kontak"><div><span className="section-kicker">KONTAK</span><h2>Ada pertanyaan tentang sistem?</h2><p>Kirim masukan atau pertanyaan melalui halaman kontak proyek.</p></div><Link href="/kontak" className="hero-primary">Hubungi tim <ArrowRight size={16} /></Link></section>
-  </main><LandingFooter /></div>;
+    <section className="landing-hero" id="beranda"><div className="hero-copy"><div className="hero-eyebrow"><Bolt size={14} fill="currentColor" />{t("Sistem Manajemen Energi Listrik")}</div><h1>{t("Pahami Energi,")}<br /><span>{t("Kelola Biaya")}</span></h1><p>{t("SMART POWER WEB menghubungkan satu sensor pada jalur masuk rumah dengan dashboard untuk memantau parameter listrik, meninjau histori, dan memperkirakan biaya.")}</p><div className="hero-actions"><Link href="/login" className="hero-primary">{t("Masuk ke dashboard")} <ArrowRight size={18} /></Link><Link href="#cara-kerja" className="hero-secondary">{t("Lihat cara kerja")}</Link></div><div className="hero-benefits"><span><CheckCircle2 size={16} />{t("Satu meter di jalur masuk")}</span><span><ShieldCheck size={16} />{t("Data dari perangkat")}</span><span><Gauge size={16} />{t("LCD dan website")}</span></div></div><LandingPreview /></section>
+    <section className="feature-section" id="fitur"><div className="feature-intro"><span className="section-kicker">{t("FITUR UTAMA")}</span><h2>{t("Informasi energi")}<br /><span>{t("di satu platform")}</span></h2><p>{t("Ringkasan dihitung dari sensor di sisi masuk, bukan dari pemantauan per peralatan.")}</p></div><div className="feature-grid">{featureCards.map((feature) => <FeatureCard key={feature.title} {...feature} title={t(feature.title)} copy={t(feature.copy)} />)}</div></section>
+    <section className="how-it-works" id="cara-kerja"><span className="section-kicker">{t("CARA KERJA SISTEM")}</span><h2>{t("Dari sensor ke dashboard")}</h2><p className="how-intro">{t("LCD tetap menampilkan pembacaan lokal. Koneksi internet diperlukan untuk mengirim dan melihat data melalui web.")}</p><ol>{steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, "0")}</span><p>{t(step)}</p></li>)}</ol></section>
+    <section className="project-summary" id="tentang"><div><span className="section-kicker">{t("TENTANG PROYEK")}</span><h2>{t("Monitoring rumah tangga dari satu titik ukur")}</h2><p>{t("Proyek ini mengembangkan prototipe ESP32, PZEM-004T, dan LCD menjadi platform website dengan histori, analisis pola konsumsi, estimasi biaya tarif, dan notifikasi.")}</p><p>{t("Karena sensor berada pada jalur masuk, dashboard menyajikan konsumsi total rumah. Sistem tidak mengidentifikasi pemakaian tiap alat.")}</p></div><Link href="/tentang" className="inline-link">{t("Tentang tim dan proyek")} <ArrowRight size={14} /></Link></section>
+    <section className="landing-contact" id="kontak"><div><span className="section-kicker">{t("KONTAK")}</span><h2>{t("Ada pertanyaan tentang sistem?")}</h2><p>{t("Kirim masukan atau pertanyaan melalui halaman kontak proyek.")}</p></div><Link href="/kontak" className="hero-primary">{t("Hubungi tim")} <ArrowRight size={16} /></Link></section>
+  </main><LandingAssistant /><LandingFooter /></div>;
 }

@@ -22,6 +22,9 @@ Konfigurasikan variabel berikut di Railway sebelum deploy:
 - `JWT_SECRET` — secret acak yang kuat untuk menandatangani token sesi.
 - `DEVELOPER_EMAIL` dan `DEVELOPER_PASSWORD` — kredensial akun developer yang dibuat saat backend mulai. Password harus minimal 12 karakter. Jika salah satu kosong atau password terlalu pendek, pembuatan akun developer dilewati dengan peringatan. Jika email sudah terdaftar, backend hanya memastikan role menjadi `DEVELOPER`; password tersimpan tidak diubah.
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, dan `SMTP_FROM` — konfigurasi email untuk lupa password.
+- `AI_API_KEY` — opsional, API key provider yang kompatibel dengan format OpenAI Chat Completions. Tanpa key, endpoint asisten memakai jawaban panduan kontekstual lokal.
+- `AI_API_URL` — URL endpoint chat completions provider (default `https://api.openai.com/v1/chat/completions`).
+- `AI_MODEL` — nama model provider (default `gpt-4o-mini`).
 - `FRONTEND_URL` — URL frontend untuk tautan reset password, misalnya `https://www.smartpower.web.id`.
 - CORS hanya mengizinkan `https://www.smartpower.web.id` dan `https://smartpower.web.id`; konfigurasi ini tidak membutuhkan `CORS_ORIGINS`.
 - `DEVICE_API_KEY` — kunci kompatibilitas untuk perangkat lama. Perangkat baru mendapat API key sendiri saat dibuat melalui `POST /api/devices`.
@@ -44,4 +47,4 @@ Konfigurasikan variabel berikut di Railway sebelum deploy:
 - [Integrasi ESP32](docs/ESP32_INTEGRATION.md)
 - [Deployment Railway](docs/DEPLOY_RAILWAY.md)
 
-Endpoint utama mencakup `GET/POST /api/devices` (daftar perangkat dan pendaftaran khusus DEVELOPER), `POST /api/telemetry` (serta alias kompatibilitas `POST /api/readings`) dengan header `x-api-key`, `GET /api/telemetry/latest` dan `GET /api/telemetry/history` (khusus pemilik yang login), cost summary, settings, notifications, dan status device. Payload telemetry disimpan ke tabel PostgreSQL `readings` dengan timestamp server. Setelah menambah migrasi, jalankan `npm run migrate` sebelum memakai endpoint baru.
+Endpoint utama mencakup `GET/POST /api/devices` (daftar perangkat dan pendaftaran khusus DEVELOPER), `POST /api/telemetry` (serta alias kompatibilitas `POST /api/readings`) dengan header `x-api-key`, `GET /api/telemetry/latest` dan `GET /api/telemetry/history` (khusus pemilik yang login), serta cost summary, settings, notifications, dan status device. Pengelolaan notifikasi menyediakan `DELETE /api/notifications/:id` dan `DELETE /api/notifications`; keduanya hanya menghapus notifikasi milik pengguna yang terautentikasi. `POST /api/ai-assistant` juga memerlukan autentikasi, membatasi frekuensi pertanyaan, dan menyusun konteks dari perangkat serta pembacaan milik akun itu sendiri. Payload telemetry disimpan ke tabel PostgreSQL `readings` dengan timestamp server. Setelah menambah migrasi, jalankan `npm run migrate` sebelum memakai endpoint baru.

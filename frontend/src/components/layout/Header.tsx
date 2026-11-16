@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Bell, ChevronDown, Menu } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Bell, ChevronDown, Menu, Volume2, VolumeX } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { OnlineBadge } from "@/components/ui/StatusBadge";
+import { LanguageToggle } from "@/components/common/LanguageToggle";
 import { apiRequest, notificationLabel, type ApiNotification } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
+import { useAmbientAudio } from "@/components/audio/AmbientAudioProvider";
 
 type HeaderDevice = { device_id: string; is_online: boolean };
 type HeaderUser = { name: string; role: "DEVELOPER" | "USER" };
 
 export function Header({ onMenu }: { onMenu: () => void }) {
   const router = useRouter();
+  const { locale, t } = useI18n();
+  const { enabled, toggle } = useAmbientAudio();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [user, setUser] = useState<HeaderUser | null>(null);
@@ -18,32 +23,31 @@ export function Header({ onMenu }: { onMenu: () => void }) {
   const [notifications, setNotifications] = useState<ApiNotification[]>([]);
   const [notificationError, setNotificationError] = useState("");
 
+  const refresh = useCallback(async () => {
+    const [userResult, deviceResult, notificationResult] = await Promise.allSettled([
+      apiRequest<{ user: HeaderUser }>("/api/auth/me"),
+      apiRequest<{ data: HeaderDevice[] }>("/api/devices"),
+      apiRequest<{ data: ApiNotification[] }>("/api/notifications?unread_only=false"),
+    ]);
+    if (userResult.status === "fulfilled") setUser(userResult.value.user);
+    if (deviceResult.status === "fulfilled") setDevices(deviceResult.value.data);
+    if (notificationResult.status === "fulfilled") { setNotifications(notificationResult.value.data); setNotificationError(""); }
+    else setNotificationError(notificationResult.reason instanceof Error ? notificationResult.reason.message : t("Notifikasi gagal dimuat."));
+  }, [t]);
+
   useEffect(() => {
     let active = true;
+    const safeRefresh = () => { if (active) void refresh(); };
     const updateProfile = (event: Event) => setUser((event as CustomEvent<HeaderUser>).detail);
     window.addEventListener("spw:profile-updated", updateProfile);
-    const refresh = async () => {
-      const [userResult, deviceResult, notificationResult] = await Promise.allSettled([
-        apiRequest<{ user: HeaderUser }>("/api/auth/me"),
-        apiRequest<{ data: HeaderDevice[] }>("/api/devices"),
-        apiRequest<{ data: ApiNotification[] }>("/api/notifications?unread_only=false"),
-      ]);
-      if (!active) return;
-      if (userResult.status === "fulfilled") setUser(userResult.value.user);
-      if (deviceResult.status === "fulfilled") setDevices(deviceResult.value.data);
-      if (notificationResult.status === "fulfilled") {
-        setNotifications(notificationResult.value.data);
-        setNotificationError("");
-      } else {
-        setNotificationError(notificationResult.reason instanceof Error ? notificationResult.reason.message : "Notifikasi gagal dimuat.");
-      }
-    };
-    void refresh();
+    window.addEventListener("spw:notifications-updated", safeRefresh);
+    const initialRefresh = window.setTimeout(() => { if (active) void refresh(); }, 0);
     const timer = window.setInterval(() => { if (!document.hidden) void refresh(); }, 30000);
-    return () => { active = false; window.clearInterval(timer); window.removeEventListener("spw:profile-updated", updateProfile); };
-  }, []);
+    return () => { active = false; window.clearTimeout(initialRefresh); window.clearInterval(timer); window.removeEventListener("spw:profile-updated", updateProfile); window.removeEventListener("spw:notifications-updated", safeRefresh); };
+  }, [refresh]);
 
   function handleLogout() {
+    if (enabled) toggle();
     document.cookie = "spw_auth=; path=/; max-age=0";
     document.cookie = "spw_role=; path=/; max-age=0";
     window.localStorage.removeItem("spw_access_token");
@@ -55,17 +59,19 @@ export function Header({ onMenu }: { onMenu: () => void }) {
   const latestNotifications = notifications.slice(0, 4);
 
   return <header className="topbar">
-    <button className="mobile-menu" onClick={onMenu} aria-label="Buka menu"><Menu size={22} /></button>
-    <div className="greeting"><h1>Halo{user?.name ? `, ${user.name}` : ""}! <span>👋</span></h1><p>Ringkasan pemantauan energi listrik Anda</p></div>
+    <button className="mobile-menu" onClick={onMenu} aria-label={t("Buka menu")}><Menu size={22} /></button>
+    <div className="greeting"><h1>{locale === "EN" ? "Hello" : "Halo"}{user?.name ? `, ${user.name}` : ""}! <span>👋</span></h1><p>{t("Ringkasan pemantauan energi listrik Anda")}</p></div>
     <div className="topbar-actions">
-      <OnlineBadge online={devices.length > 0 && isOnline}>{devices.length > 0 ? (isOnline ? "Perangkat online" : "Perangkat offline") : "Belum ada perangkat"}</OnlineBadge>
+      <OnlineBadge online={devices.length > 0 && isOnline}>{devices.length > 0 ? (isOnline ? t("Perangkat online") : t("Perangkat offline")) : t("Belum ada perangkat")}</OnlineBadge>
+      <LanguageToggle compact />
+      <button className={`ambient-toggle ${enabled ? "active" : ""}`} onClick={toggle} aria-pressed={enabled} title={enabled ? t("Ambient On") : t("Ambient Muted")}><span className="ambient-toggle-icon">{enabled ? <Volume2 size={15} /> : <VolumeX size={15} />}</span><span className="ambient-toggle-label">{enabled ? t("Ambient On") : t("Ambient Muted")}</span></button>
       <div className="header-menu-wrap">
-        <button className="icon-button notification-button" aria-label={`Notifikasi, ${unreadCount} belum dibaca`} aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen(!notificationsOpen); setProfileOpen(false); }}><Bell size={21} />{unreadCount > 0 && <span>{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>
-        {notificationsOpen && <div className="header-popover notification-popover"><strong>Notifikasi perangkat</strong>{notificationError ? <p role="alert">{notificationError}</p> : latestNotifications.length ? latestNotifications.map((notification) => <div className="notification-item" key={notification.id}><span className={`notification-dot ${notification.is_read ? "" : "warning"}`} /><div><b>{notificationLabel(notification.type)}</b><small>{new Date(notification.created_at).toLocaleString("id-ID")} · {notification.is_read ? "Sudah dibaca" : "Belum dibaca"}</small></div></div>) : <p className="notification-empty">Belum ada notifikasi dari perangkat Anda.</p>}<button onClick={() => { setNotificationsOpen(false); router.push("/alarm"); }}>Lihat semua notifikasi</button></div>}
+        <button className="icon-button notification-button" aria-label={`${t("Notifikasi")}, ${unreadCount} ${t("Belum dibaca")}`} aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen(!notificationsOpen); setProfileOpen(false); }}><Bell size={21} />{unreadCount > 0 && <span>{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>
+        {notificationsOpen && <div className="header-popover notification-popover"><strong>{t("Notifikasi perangkat")}</strong>{notificationError ? <p role="alert">{notificationError}</p> : latestNotifications.length ? latestNotifications.map((notification) => <div className="notification-item" key={notification.id}><span className={`notification-dot ${notification.is_read ? "" : "warning"}`} /><div><b>{t(notificationLabel(notification.type))}</b><small>{new Date(notification.created_at).toLocaleString(locale === "EN" ? "en-US" : "id-ID")} · {notification.is_read ? t("Sudah dibaca") : t("Belum dibaca")}</small></div></div>) : <p className="notification-empty">{t("Belum ada notifikasi dari perangkat Anda.")}</p>}<button onClick={() => { setNotificationsOpen(false); router.push("/alarm"); }}>{t("Lihat semua notifikasi")}</button></div>}
       </div>
       <div className="header-menu-wrap">
-        <button className="profile-trigger" aria-label="Buka menu profil" aria-expanded={profileOpen} onClick={() => { setProfileOpen(!profileOpen); setNotificationsOpen(false); }}><div className="avatar">{user?.name.slice(0, 1).toUpperCase() ?? "?"}</div><div className="profile-copy"><strong>{user?.name ?? "Akun"}</strong><span>{user?.role === "DEVELOPER" ? "Developer" : "Pengguna"}</span></div><ChevronDown size={17} /></button>
-        {profileOpen && <div className="header-popover profile-popover"><button onClick={() => router.push("/profil")}>Profil saya</button><button onClick={handleLogout}>Keluar</button></div>}
+        <button className="profile-trigger" aria-label={t("Buka menu profil")} aria-expanded={profileOpen} onClick={() => { setProfileOpen(!profileOpen); setNotificationsOpen(false); }}><div className="avatar">{user?.name.slice(0, 1).toUpperCase() ?? "?"}</div><div className="profile-copy"><strong>{user?.name ?? t("Akun")}</strong><span>{user?.role === "DEVELOPER" ? t("Developer") : t("Pengguna")}</span></div><ChevronDown size={17} /></button>
+        {profileOpen && <div className="header-popover profile-popover"><button onClick={() => router.push("/profil")}>{t("Profil saya")}</button><button onClick={handleLogout}>{t("Keluar")}</button></div>}
       </div>
     </div>
   </header>;

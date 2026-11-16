@@ -16,9 +16,24 @@ export async function listNotifications(userId: number, unreadOnly = false) {
   return result.rows;
 }
 
+export async function countUnreadNotifications(userId: number) {
+  const result = await query<{ count: string }>("SELECT COUNT(*)::text AS count FROM notifications n JOIN settings s ON s.device_id=n.device_id WHERE s.user_id=$1 AND n.is_read=false", [userId]);
+  return Number(result.rows[0]?.count ?? 0);
+}
+
 export async function markNotificationRead(userId: number, id: number) {
   const result = await query("UPDATE notifications n SET is_read=true FROM settings s WHERE n.id=$1 AND s.device_id=n.device_id AND s.user_id=$2 RETURNING n.id, n.is_read", [id, userId]);
   return result.rows[0] ?? null;
+}
+
+export async function deleteNotification(userId: number, id: number) {
+  const result = await query("DELETE FROM notifications n USING settings s WHERE n.id=$1 AND s.device_id=n.device_id AND s.user_id=$2 RETURNING n.id", [id, userId]);
+  return Boolean(result.rowCount);
+}
+
+export async function deleteAllNotifications(userId: number) {
+  const result = await query("DELETE FROM notifications n USING settings s WHERE s.device_id=n.device_id AND s.user_id=$1 RETURNING n.id", [userId]);
+  return result.rowCount ?? 0;
 }
 
 export async function checkOfflineDevices() {

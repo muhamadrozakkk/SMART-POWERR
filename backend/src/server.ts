@@ -22,6 +22,7 @@ import { ensureDeveloperAccount } from "./services/authService.js";
 import { hardwareRoutes } from "./routes/hardwareRoutes.js";
 import { userRoutes } from "./routes/userRoutes.js";
 import { telemetryRoutes } from "./routes/telemetryRoutes.js";
+import { aiAssistantRoutes } from "./routes/aiAssistantRoutes.js";
 
 export const app = express();
 app.disable("x-powered-by");
@@ -44,6 +45,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/hardware", hardwareRoutes);
 app.use("/api/readings", readingRoutes);
 app.use("/api/telemetry", telemetryRoutes);
+app.use("/api/ai-assistant", aiAssistantRoutes);
 app.use("/api/cost", costRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/notifications", notificationRoutes);

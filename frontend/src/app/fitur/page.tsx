@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { Activity, BarChart3, Bolt, CircleDollarSign, Gauge, ShieldCheck, Smartphone } from "lucide-react";
 import { FeatureCard } from "@/components/landing/FeatureCard";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingHeader } from "@/components/landing/LandingHeader";
+import { useI18n } from "@/lib/i18n";
 
 const features = [
   { icon: Activity, tone: "blue", title: "Enam parameter listrik", copy: "Tegangan, arus, daya aktif, energi, frekuensi, dan faktor daya dari satu PZEM-004T." },
@@ -14,5 +17,6 @@ const features = [
 ];
 
 export default function FeaturesPage() {
-  return <div className="landing-page"><LandingHeader /><main className="public-page-main"><section className="public-hero"><span className="section-kicker">FITUR SMART POWER</span><h1>Informasi energi rumah,<br /><span>dalam satu dashboard.</span></h1><p>Fitur bekerja dari satu sensor yang dipasang pada sisi masuk instalasi listrik.</p></section><section className="public-feature-grid">{features.map((feature) => <FeatureCard key={feature.title} {...feature} />)}</section><section className="public-cta"><div><span className="section-kicker">MULAI MENGGUNAKAN</span><h2>Tinjau data dari perangkat Anda.</h2><p>Masuk untuk melihat pembacaan yang diterima sistem.</p></div><Link href="/login" className="hero-primary">Masuk <Bolt size={17} /></Link></section></main><LandingFooter /></div>;
+  const { t } = useI18n();
+  return <div className="landing-page"><LandingHeader /><main className="public-page-main"><section className="public-hero"><span className="section-kicker">{t("FITUR SMART POWER")}</span><h1>{t("Informasi energi rumah,")}<br /><span>{t("dalam satu dashboard.")}</span></h1><p>{t("Fitur bekerja dari satu sensor yang dipasang pada sisi masuk instalasi listrik.")}</p></section><section className="public-feature-grid">{features.map((feature) => <FeatureCard key={feature.title} {...feature} />)}</section><section className="public-cta"><div><span className="section-kicker">{t("MULAI MENGGUNAKAN")}</span><h2>{t("Tinjau data dari perangkat Anda.")}</h2><p>{t("Masuk untuk melihat pembacaan yang diterima sistem.")}</p></div><Link href="/login" className="hero-primary">{t("Masuk")} <Bolt size={17} /></Link></section></main><LandingFooter /></div>;
 }
