@@ -6,12 +6,12 @@
 #include <math.h>
 
 // Isi kredensial Wi-Fi perangkat sebelum mengunggah firmware.
-const char *WIFI_SSID = "ISI_NAMA_WIFI";
-const char *WIFI_PASSWORD = "ISI_PASSWORD_WIFI";
+const char *WIFI_SSID = "SMART";
+const char *WIFI_PASSWORD = "123456789";
 
 const char *API_URL = "https://smartpower-production.up.railway.app/api/telemetry";
 const char *API_KEY = "d1b4b7855fc05023373a768dba42b755df391cfbbe8ebcb4";
-const char *DEVICE_ID = "esp32-utama";
+const char *DEVICE_ID = "SPW-F05A9D42B9A8435C";
 
 // UART2 default ESP32 DevKit: RX2 GPIO16, TX2 GPIO17.
 constexpr int PZEM_RX_PIN = 16;
