@@ -61,8 +61,8 @@ function localAnswer(message: string, language: Language, context: Context) {
   return "Aku bisa menjelaskan pembacaan energi, estimasi tarif, status perangkat, dan histori akunmu. Tanyakan salah satu topik itu agar aku bisa memakai data terbaru yang tersedia.";
 }
 
-async function generateAnswer(message: string, language: Language, context: Context) {
-  if (!env.aiApiKey) return localAnswer(message, language, context);
+async function generateAnswer(message: string, language: Language, context: Context): Promise<{ answer: string; provider: "openai-compatible" | "local" | "local-fallback" }> {
+  if (!env.aiApiKey) return { answer: localAnswer(message, language, context), provider: "local" };
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
@@ -84,7 +84,10 @@ async function generateAnswer(message: string, language: Language, context: Cont
     if (!response.ok) throw new Error(result.error?.message ?? `AI provider returned ${response.status}`);
     const answer = result.choices?.[0]?.message?.content?.trim();
     if (!answer) throw new Error("AI provider returned an empty response");
-    return answer.replace(/[*#`]/g, "").replace(/\s+/g, " ").slice(0, 1200);
+    return { answer: answer.replace(/[*#`]/g, "").replace(/\s+/g, " ").slice(0, 1200), provider: "openai-compatible" };
+  } catch (error) {
+    console.warn("AI provider unavailable; using local contextual response.", error instanceof Error ? error.message : "Unknown provider error");
+    return { answer: localAnswer(message, language, context), provider: "local-fallback" };
   } finally { clearTimeout(timeout); }
 }
 
@@ -94,7 +97,7 @@ aiAssistantRoutes.post("/", async (request, response, next) => {
     if (typeof body.message !== "string" || !body.message.trim() || body.message.length > 1000) throw new HttpError(400, "Pesan wajib diisi dan maksimal 1000 karakter");
     const language: Language = body.language === "EN" ? "EN" : "ID";
     const context = await loadContext(userId(request));
-    const answer = await generateAnswer(body.message.trim(), language, context);
-    response.json({ answer, context, provider: env.aiApiKey ? "configured" : "local" });
+    const result = await generateAnswer(body.message.trim(), language, context);
+    response.json({ ...result, context });
   } catch (error) { next(error); }
 });
