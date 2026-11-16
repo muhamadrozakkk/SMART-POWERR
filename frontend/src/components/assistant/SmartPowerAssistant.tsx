@@ -27,7 +27,8 @@ export function SmartPowerAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const recognitionRef = useRef<RecognitionInstance | null>(null);
   const nextId = useRef(0);
-  const assistantGreeting = locale === "EN" ? "Hello! I am PowerMate, your SMART POWER WEB energy assistant. Ask me about your latest readings, device status, usage history, or estimated electricity cost." : "Halo! Aku PowerMate, asisten energi SMART POWER WEB. Tanyakan pembacaan terbaru, status perangkat, riwayat pemakaian, atau estimasi biaya listrik.";
+  const [aiMode, setAiMode] = useState<"unknown" | "general" | "local" | "limited">("unknown");
+  const assistantGreeting = locale === "EN" ? "Hello! I am PowerMate, your general AI assistant in SMART POWER WEB. Ask me about everyday topics, the project, or your energy dashboard." : "Halo! Aku PowerMate, asisten AI umum di SMART POWER WEB. Tanyakan apa saja—topik sehari-hari, konsep proyek ini, atau data dashboard energimu.";
 
   useEffect(() => {
     const voiceTimer = window.setTimeout(() => setVoiceEnabled(window.localStorage.getItem("spw_ai_voice_enabled") === "1"), 0);
@@ -98,6 +99,7 @@ export function SmartPowerAssistant() {
     try {
       const history = [...messages.filter((item) => item.id !== 0).map(({ role, text }) => ({ role, content: text })), { role: "user" as const, content: message }].slice(-10);
       const result = await apiRequest<{ answer: string; provider?: string }>("/api/ai-assistant", { method: "POST", body: JSON.stringify({ message, language: locale, context, history }) });
+      setAiMode(result.provider === "openai-compatible" ? "general" : result.provider === "local-fallback" ? "limited" : "local");
       const answer: Message = { id: ++nextId.current, role: "assistant", text: result.answer };
       setMessages((current) => [...current, answer]);
       speak(answer.text);
@@ -107,7 +109,7 @@ export function SmartPowerAssistant() {
   }, [assistantGreeting, context, loading, locale, messages, speak]);
 
   const close = () => { stopVoice(); window.speechSynthesis?.cancel(); setOpen(false); };
-  const suggestions = locale === "EN" ? ["What is my latest power reading?", "How is my estimated cost calculated?", "Is my device online?"] : ["Berapa daya terbaru saya?", "Bagaimana estimasi biaya dihitung?", "Apakah perangkat saya online?"];
+  const suggestions = locale === "EN" ? ["Explain how this website works", "What is power factor?", "Tell me something interesting"] : ["Jelaskan cara kerja website ini", "Apa itu faktor daya?", "Ceritakan hal menarik"];
 
   return <aside className="smart-assistant" aria-label={t("Asisten SMART POWER WEB")}>
     {open && <section className="assistant-panel smart-assistant-panel" role="dialog" aria-modal="false" aria-labelledby="smart-assistant-title">
@@ -118,8 +120,9 @@ export function SmartPowerAssistant() {
         {loading && <div className="assistant-message assistant"><span className="assistant-typing">{locale === "EN" ? "Checking your latest data…" : "Memeriksa data terbaru…"}</span></div>}
         {!messages.some((message) => message.role === "user") && <div className="assistant-suggestions">{suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => void sendMessage(suggestion)}>{suggestion}</button>)}</div>}
       </div>
+      {aiMode !== "unknown" && aiMode !== "general" && <p className="assistant-mode-note" role="status">{aiMode === "limited" ? (locale === "EN" ? "AI provider unavailable; using limited local answers." : "AI umum belum tersedia; sedang memakai jawaban lokal terbatas.") : (locale === "EN" ? "Local mode: basic answers only. Add a Gemini key for broad general chat." : "Mode lokal: jawaban umum terbatas. Tambahkan Gemini API key untuk percakapan umum yang lebih luas.")}</p>}
       {error && <p className="assistant-error" role="alert">{error}</p>}
-      <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); void sendMessage(draft); }}><button className={`assistant-mic ${listening ? "recording" : ""}`} type="button" onClick={toggleMic} aria-label={listening ? t("Hentikan mikrofon") : t("Mulai bicara")}>{listening ? <MicOff size={17} /> : <Mic size={17} />}</button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={locale === "EN" ? "Ask about your energy data…" : "Tanyakan tentang data energi…"} aria-label={t("Tulis pertanyaan untuk PowerMate")} /><button type="submit" aria-label={t("Kirim pertanyaan")} disabled={!draft.trim() || loading}><Send size={18} /></button></form>
+      <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); void sendMessage(draft); }}><button className={`assistant-mic ${listening ? "recording" : ""}`} type="button" onClick={toggleMic} aria-label={listening ? t("Hentikan mikrofon") : t("Mulai bicara")}>{listening ? <MicOff size={17} /> : <Mic size={17} />}</button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={locale === "EN" ? "Ask me anything…" : "Tanyakan apa saja…"} aria-label={t("Tulis pertanyaan untuk PowerMate")} /><button type="submit" aria-label={t("Kirim pertanyaan")} disabled={!draft.trim() || loading}><Send size={18} /></button></form>
       <div className={`assistant-voice-indicator ${voiceEnabled ? "active" : ""}`} aria-hidden="true"><AudioLines size={12} /><span>{voiceEnabled ? t("Suara AI aktif") : t("Jawaban teks")}</span></div>
     </section>}
     <button className="assistant-launcher" type="button" onClick={() => setOpen((current) => !current)} aria-label={open ? t("Tutup PowerMate") : t("Buka PowerMate")}><Sparkles size={23} /></button>
