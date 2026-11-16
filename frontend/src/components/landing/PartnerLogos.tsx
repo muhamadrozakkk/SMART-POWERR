@@ -36,6 +36,13 @@ const partnerLogos = [
     height: 40,
     className: "partner-logo--blu",
   },
+  {
+    src: "/partner-logos/texa-2026.jpg",
+    alt: "Tidar Engineering Expo and Awards 2026",
+    width: 42,
+    height: 42,
+    className: "partner-logo--texa",
+  },
 ];
 
 export function PartnerLogos({ className = "" }: { className?: string }) {

@@ -1,13 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Bell, ChevronDown, Menu, Volume2, VolumeX } from "lucide-react";
+import { Bell, ChevronDown, Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { OnlineBadge } from "@/components/ui/StatusBadge";
 import { LanguageToggle } from "@/components/common/LanguageToggle";
 import { apiRequest, notificationLabel, type ApiNotification } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import { useAmbientAudio } from "@/components/audio/AmbientAudioProvider";
 
 type HeaderDevice = { device_id: string; is_online: boolean };
 type HeaderUser = { name: string; role: "DEVELOPER" | "USER" };
@@ -15,7 +14,6 @@ type HeaderUser = { name: string; role: "DEVELOPER" | "USER" };
 export function Header({ onMenu }: { onMenu: () => void }) {
   const router = useRouter();
   const { locale, t } = useI18n();
-  const { enabled, toggle } = useAmbientAudio();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [user, setUser] = useState<HeaderUser | null>(null);
@@ -47,7 +45,6 @@ export function Header({ onMenu }: { onMenu: () => void }) {
   }, [refresh]);
 
   function handleLogout() {
-    if (enabled) toggle();
     document.cookie = "spw_auth=; path=/; max-age=0";
     document.cookie = "spw_role=; path=/; max-age=0";
     window.localStorage.removeItem("spw_access_token");
@@ -64,7 +61,6 @@ export function Header({ onMenu }: { onMenu: () => void }) {
     <div className="topbar-actions">
       <OnlineBadge online={devices.length > 0 && isOnline}>{devices.length > 0 ? (isOnline ? t("Perangkat online") : t("Perangkat offline")) : t("Belum ada perangkat")}</OnlineBadge>
       <LanguageToggle compact />
-      <button className={`ambient-toggle ${enabled ? "active" : ""}`} onClick={toggle} aria-pressed={enabled} title={enabled ? t("Deep Space: On") : t("Deep Space: Off")}><span className="ambient-toggle-icon">{enabled ? <Volume2 size={15} /> : <VolumeX size={15} />}</span><span className="ambient-toggle-label">{enabled ? t("Deep Space: On") : t("Deep Space: Off")}</span></button>
       <div className="header-menu-wrap">
         <button className="icon-button notification-button" aria-label={`${t("Notifikasi")}, ${unreadCount} ${t("Belum dibaca")}`} aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen(!notificationsOpen); setProfileOpen(false); }}><Bell size={21} />{unreadCount > 0 && <span>{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>
         {notificationsOpen && <div className="header-popover notification-popover"><strong>{t("Notifikasi perangkat")}</strong>{notificationError ? <p role="alert">{notificationError}</p> : latestNotifications.length ? latestNotifications.map((notification) => <div className="notification-item" key={notification.id}><span className={`notification-dot ${notification.is_read ? "" : "warning"}`} /><div><b>{t(notificationLabel(notification.type))}</b><small>{new Date(notification.created_at).toLocaleString(locale === "EN" ? "en-US" : "id-ID")} · {notification.is_read ? t("Sudah dibaca") : t("Belum dibaca")}</small></div></div>) : <p className="notification-empty">{t("Belum ada notifikasi dari perangkat Anda.")}</p>}<button onClick={() => { setNotificationsOpen(false); router.push("/alarm"); }}>{t("Lihat semua notifikasi")}</button></div>}

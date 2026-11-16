@@ -1,6 +1,6 @@
 import { randomBytes, createHash } from "node:crypto";
 import { Router } from "express";
-import { query } from "../db/pool.js";
+import { query, transaction } from "../db/pool.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { HttpError } from "../utils/errors.js";
 
@@ -31,6 +31,24 @@ adminRoutes.patch("/users/:id/role", async (request, response, next) => {
   } catch (error) { next(error); }
 });
 
+adminRoutes.delete("/users/:id", async (request, response, next) => {
+  try {
+    const id = Number(request.params.id);
+    if (!Number.isSafeInteger(id) || id < 1) throw new HttpError(400, "ID pengguna tidak valid");
+    if (id === request.user?.id) throw new HttpError(400, "Kamu tidak dapat menghapus akun developer yang sedang digunakan");
+    const removed = await transaction(async (client) => {
+      const target = await client.query<{ id: number; name: string; email: string; role: string }>("SELECT id,name,email,role FROM users WHERE id=$1 FOR UPDATE", [id]);
+      const user = target.rows[0];
+      if (!user) throw new HttpError(404, "Pengguna tidak ditemukan");
+      if (user.role !== "USER") throw new HttpError(400, "Endpoint ini hanya dapat menghapus akun pengguna USER");
+      await client.query("DELETE FROM users WHERE id=$1", [id]);
+      await client.query("INSERT INTO system_logs(level,message,details) VALUES('warning','Akun pengguna dihapus oleh developer',$1::jsonb)", [JSON.stringify({ user_id: id, email: user.email })]);
+      return { id: user.id, name: user.name, email: user.email };
+    });
+    response.json({ ok: true, data: removed, message: "Akun pengguna dihapus. Perangkat tetap tersimpan dan dilepas dari akun tersebut." });
+  } catch (error) { next(error); }
+});
+
 adminRoutes.post("/devices/:deviceId/reset-token", async (request, response, next) => {
   try {
     const deviceId = String(request.params.deviceId);
@@ -47,6 +65,22 @@ adminRoutes.get("/devices", async (_request, response, next) => {
   try {
     const result = await query("SELECT d.device_id,d.name,d.location,d.last_seen,s.user_id,u.name AS owner_name,u.email AS owner_email FROM devices d LEFT JOIN settings s ON s.device_id=d.device_id LEFT JOIN users u ON u.id=s.user_id ORDER BY d.created_at DESC");
     response.json({ data: result.rows });
+  } catch (error) { next(error); }
+});
+
+adminRoutes.delete("/devices/:deviceId", async (request, response, next) => {
+  try {
+    const deviceId = String(request.params.deviceId ?? "").trim();
+    if (!deviceId) throw new HttpError(400, "Device ID tidak valid");
+    const removed = await transaction(async (client) => {
+      const target = await client.query<{ device_id: string; name: string }>("SELECT device_id,name FROM devices WHERE device_id=$1 FOR UPDATE", [deviceId]);
+      const device = target.rows[0];
+      if (!device) throw new HttpError(404, "Perangkat tidak ditemukan");
+      await client.query("DELETE FROM devices WHERE device_id=$1", [deviceId]);
+      await client.query("INSERT INTO system_logs(level,message,details) VALUES('warning','Perangkat dan konfigurasi ESP32 dihapus oleh developer',$1::jsonb)", [JSON.stringify({ device_id: deviceId, name: device.name })]);
+      return device;
+    });
+    response.json({ ok: true, data: removed, message: "Perangkat, API key, konfigurasi database, pembacaan, dan notifikasi terkait telah dihapus. Konfigurasi yang sudah terpasang di firmware ESP32 perlu diubah secara terpisah." });
   } catch (error) { next(error); }
 });
 

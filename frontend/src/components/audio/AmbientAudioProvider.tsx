@@ -1,12 +1,11 @@
-"use client";
+﻿"use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef } from "react";
 
-type AudioValue = { enabled: boolean; toggle: () => void; setDucked: (ducked: boolean) => void };
+type AudioValue = { setDucked: (ducked: boolean) => void };
 const AudioContextState = createContext<AudioValue | null>(null);
 
 export function AmbientAudioProvider({ children }: { children: React.ReactNode }) {
-  const [enabled, setEnabled] = useState(false);
   const audioRef = useRef<AudioContext | null>(null);
   const gainRef = useRef<GainNode | null>(null);
   const duckedRef = useRef(false);
@@ -41,11 +40,13 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
         stereo.connect(drone);
         osc.start();
       }
-      const noiseBuffer = context.createBuffer(1, context.sampleRate * 3, context.sampleRate);
+      const noiseBuffer = context.createBuffer(1, context.sampleRate * 20, context.sampleRate);
       const noiseData = noiseBuffer.getChannelData(0);
       let brown = 0;
       for (let index = 0; index < noiseData.length; index += 1) {
-        brown = (brown + 0.018 * (Math.random() * 2 - 1)) / 1.018;
+        const slow = Math.sin(index / context.sampleRate * Math.PI * 0.31) * 0.42;
+        const fine = Math.sin(index / context.sampleRate * Math.PI * 7.7) * 0.08;
+        brown = (brown + 0.018 * (Math.sin(index * 12.9898) * 0.35 + slow + fine)) / 1.018;
         noiseData[index] = brown * 3.2;
       }
       const noise = context.createBufferSource();
@@ -54,9 +55,9 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
       noise.loop = true;
       noise.buffer = noiseBuffer;
       noiseFilter.type = "bandpass";
-      noiseFilter.frequency.value = 210;
+      noiseFilter.frequency.value = 260;
       noiseFilter.Q.value = 0.45;
-      noiseGain.gain.value = 0.13;
+      noiseGain.gain.value = 0.16;
       noise.connect(noiseFilter);
       noiseFilter.connect(noiseGain);
       noiseGain.connect(filter);
@@ -76,18 +77,10 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
     if (gain) gain.gain.setTargetAtTime(duckedRef.current ? 0.035 : 0.11, context.currentTime, 0.7);
   }, []);
 
-  const toggle = useCallback(() => {
-    const next = !enabled;
-    setEnabled(next);
-    window.localStorage.setItem("spw_ambient_enabled", next ? "1" : "0");
-    if (next) void start().catch(() => setEnabled(false));
-    else if (audioRef.current && gainRef.current) gainRef.current.gain.setTargetAtTime(0, audioRef.current.currentTime, 0.35);
-  }, [enabled, start]);
-
   const setDucked = useCallback((ducked: boolean) => {
     duckedRef.current = ducked;
-    if (audioRef.current && gainRef.current && enabled) gainRef.current.gain.setTargetAtTime(ducked ? 0.035 : 0.11, audioRef.current.currentTime, 0.2);
-  }, [enabled]);
+    if (audioRef.current && gainRef.current) gainRef.current.gain.setTargetAtTime(ducked ? 0.035 : 0.11, audioRef.current.currentTime, 0.2);
+  }, []);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("spw_ambient_enabled") === "1";
@@ -96,19 +89,23 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
     const startAfterLoginEvent = () => {
       window.localStorage.removeItem("spw_ambient_start_on_login");
       window.localStorage.setItem("spw_ambient_enabled", "1");
-      window.setTimeout(() => setEnabled(true), 0);
-      void start().catch(() => { setEnabled(false); window.localStorage.setItem("spw_ambient_enabled", "0"); });
+      void start().catch(() => undefined);
+    };
+    const startAfterBrowserGesture = () => {
+      window.localStorage.setItem("spw_ambient_enabled", "1");
+      void start().catch(() => undefined);
+      window.removeEventListener("pointerdown", startAfterBrowserGesture);
+      window.removeEventListener("keydown", startAfterBrowserGesture);
     };
     window.addEventListener("spw:login-success", startAfterLoginEvent);
-    if (stored || startAfterLogin) {
-      window.localStorage.setItem("spw_ambient_enabled", "1");
-      window.setTimeout(() => setEnabled(true), 0);
-      void start().catch(() => { setEnabled(false); window.localStorage.setItem("spw_ambient_enabled", "0"); });
-    }
-    return () => { window.removeEventListener("spw:login-success", startAfterLoginEvent); if (audioRef.current) void audioRef.current.close(); audioRef.current = null; gainRef.current = null; };
+    window.addEventListener("pointerdown", startAfterBrowserGesture);
+    window.addEventListener("keydown", startAfterBrowserGesture);
+    window.localStorage.setItem("spw_ambient_enabled", "1");
+    if (stored || startAfterLogin) void start().catch(() => undefined);
+    return () => { window.removeEventListener("spw:login-success", startAfterLoginEvent); window.removeEventListener("pointerdown", startAfterBrowserGesture); window.removeEventListener("keydown", startAfterBrowserGesture); if (audioRef.current) void audioRef.current.close(); audioRef.current = null; gainRef.current = null; };
   }, [start]);
 
-  return <AudioContextState.Provider value={{ enabled, toggle, setDucked }}>{children}</AudioContextState.Provider>;
+  return <AudioContextState.Provider value={{ setDucked }}>{children}</AudioContextState.Provider>;
 }
 
 export function useAmbientAudio() {

@@ -140,7 +140,6 @@ const en: Record<string, string> = {
   "Riwayat": "History",
   "Analisis": "Analysis",
   "Contoh tampilan dashboard": "Dashboard preview",
-  "ILUSTRASI": "ILLUSTRATION",
   "Contoh pembacaan": "Sample reading",
   "Biaya": "Costs",
   "Hari ini": "Today",

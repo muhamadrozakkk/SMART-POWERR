@@ -42,12 +42,12 @@ export function SmartPowerAssistant() {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = locale === "EN" ? "en-US" : "id-ID";
-    utterance.pitch = 1.12;
-    utterance.rate = 0.94;
-    utterance.volume = 1;
+    utterance.pitch = 1.08;
+    utterance.rate = 0.98;
+    utterance.volume = 0.92;
     const voices = window.speechSynthesis.getVoices();
     const languageVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith(locale === "EN" ? "en" : "id"));
-    utterance.voice = languageVoices.find((voice) => /female|woman|gadis|google.*bahasa|indonesia.*female/i.test(voice.name)) ?? languageVoices[0] ?? null;
+    utterance.voice = languageVoices.find((voice) => /female|woman|perempuan|gadis|damayanti|google.*bahasa|indonesia.*female/i.test(voice.name)) ?? languageVoices[0] ?? null;
     utterance.onstart = () => setDucked(true);
     utterance.onend = () => setDucked(false);
     utterance.onerror = () => setDucked(false);
