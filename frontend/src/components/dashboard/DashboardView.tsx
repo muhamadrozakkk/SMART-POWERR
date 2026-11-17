@@ -27,6 +27,7 @@ export function DashboardView() {
   const [selectedDevice, setSelectedDevice] = useState("");
   const [error, setError] = useState("");
   const lastReadingTimestamp = useRef("");
+  const lastDashboardRefresh = useRef(0);
   const load = useCallback(async () => {
     const days = period === "day" ? 1 : period === "week" ? 7 : 30;
     const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -51,6 +52,7 @@ export function DashboardView() {
       for (const result of [historyResult, costResult, deviceResult, alarmsResult, settingsResult]) if (result.status === "rejected") throw result.reason;
       setLatest(latestResult.status === "fulfilled" ? latestResult.value : null);
       lastReadingTimestamp.current = latestResult.status === "fulfilled" ? latestResult.value.timestamp : "";
+      lastDashboardRefresh.current = Date.now();
       setHistory(historyResult.status === "fulfilled" ? historyResult.value.data : []);
       setCost(costResult.status === "fulfilled" ? costResult.value : null);
       setDevice(deviceResult.status === "fulfilled" ? deviceResult.value.data : null);
@@ -77,13 +79,13 @@ export function DashboardView() {
         lastReadingTimestamp.current = reading.timestamp;
         setLatest(reading);
         // A new ESP32 sample also refreshes the chart, cost summary, and device status.
-        void load();
+        if (Date.now() - lastDashboardRefresh.current >= 30000) void load();
       }
     } catch { /* Keep the last successful sample visible during brief network errors. */ }
   }, [devices, load, selectedDevice]);
-  useEffect(() => { const initial = window.setTimeout(() => void load(), 0); const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 60000); const onDeviceAdded = () => void load(); window.addEventListener("spw:device-added", onDeviceAdded); return () => { window.clearTimeout(initial); window.clearInterval(timer); window.removeEventListener("spw:device-added", onDeviceAdded); }; }, [load]);
+  useEffect(() => { const initial = window.setTimeout(() => void load(), 0); const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 30000); const onDeviceAdded = () => void load(); window.addEventListener("spw:device-added", onDeviceAdded); return () => { window.clearTimeout(initial); window.clearInterval(timer); window.removeEventListener("spw:device-added", onDeviceAdded); }; }, [load]);
   useEffect(() => {
-    const timer = window.setInterval(() => { if (!document.hidden) void refreshLatest(); }, 5000);
+    const timer = window.setInterval(() => { if (!document.hidden) void refreshLatest(); }, 2000);
     const onVisibility = () => { if (!document.hidden) void refreshLatest(); };
     document.addEventListener("visibilitychange", onVisibility);
     return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisibility); };

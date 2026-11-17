@@ -31,7 +31,8 @@ const char *DEVICE_ID = "SPW-18BE5BF4E177ACEC";
 constexpr int PZEM_RX_PIN = 16;
 constexpr int PZEM_TX_PIN = 17;
 constexpr unsigned long SENSOR_READ_INTERVAL_MS = 1000UL;
-constexpr unsigned long SEND_INTERVAL_MS = 60UL * 1000UL;
+constexpr unsigned long SEND_INTERVAL_MS = 5000UL;
+constexpr unsigned long RTC_LOG_INTERVAL_MS = 60UL * 1000UL;
 
 HardwareSerial pzemSerial(2);
 PZEM004Tv30 pzem(pzemSerial, PZEM_RX_PIN, PZEM_TX_PIN);
@@ -118,7 +119,7 @@ void printRtcTime() {
     }
     return;
   }
-  if (millis() - lastRtcLog < SEND_INTERVAL_MS) return;
+  if (millis() - lastRtcLog < RTC_LOG_INTERVAL_MS) return;
   lastRtcLog = millis();
   const DateTime now = rtc.now();
   Serial.printf("RTC WIB: %02d-%02d-%04d %02d:%02d:%02d\n",
