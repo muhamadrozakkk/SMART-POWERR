@@ -13,6 +13,7 @@ import { PowerChart } from "@/components/dashboard/PowerChart";
 import { LiveCostCard } from "@/components/dashboard/LiveCostCard";
 import { EnergyInsight } from "@/components/dashboard/EnergyInsight";
 import { useI18n } from "@/lib/i18n";
+import { formatWibDate, formatWibTime } from "@/lib/datetime";
 
 export function DashboardView() {
   const { t, locale } = useI18n();
@@ -79,6 +80,6 @@ export function DashboardView() {
   ];
   const numberLocale = locale === "EN" ? "en-US" : "id-ID";
   const metricValues = metricInfo.map((metric) => ({ ...metric, value: metric.value.toLocaleString(numberLocale, { maximumFractionDigits: 3 }), trend: trend(metric.field), status: latest ? metric.detail : "Menunggu data sensor", statusTone: "stable" as const }));
-  const chartData: PowerReading[] = history.map((row) => ({ time: new Date(row.timestamp).toLocaleString("id-ID", period === "day" ? { hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "short" }), power: row.power, energy: row.energy, current: row.current, voltage: row.voltage, cost: row.energy * (cost?.tariff_per_kwh ?? 0) }));
+  const chartData: PowerReading[] = history.map((row) => ({ time: period === "day" ? formatWibTime(row.timestamp).slice(0, 5) : formatWibDate(row.timestamp), power: row.power, energy: row.energy, current: row.current, voltage: row.voltage, cost: row.energy * (cost?.tariff_per_kwh ?? 0) }));
   return <div className="dashboard-grid">{devices.length > 0 && <label className="form-field device-picker"><span>{t("Pilih perangkat")}</span><select className="input-control" value={selectedDevice} onChange={(event) => setSelectedDevice(event.target.value)}>{devices.map((item) => <option key={item.device_id} value={item.device_id}>{item.name} · {item.device_id}</option>)}</select></label>}{error ? <p className="settings-status">{error}</p> : null}<div className="metrics-row">{metricValues.map((metric) => <MetricCard key={metric.label} metric={metric} />)}</div><EnergyInsight power={current.power} todayCost={cost?.today.cost_rp ?? 0} monthCost={cost?.month.cost_rp ?? 0} monthEnergy={cost?.month.energy_kwh ?? 0} /><PowerChart data={chartData} period={period} onPeriodChange={setPeriod} /><div className="summary-row"><EnergySummary energyKwh={cost?.month.energy_kwh ?? 0} /><LiveCostCard value={cost?.today.cost_rp ?? 0} tariff={cost?.tariff_per_kwh ?? 0} /><CostSummaryCard summary={{ title: "Estimasi Biaya Bulan Ini", value: `Rp ${(cost?.month.cost_rp ?? 0).toLocaleString(numberLocale)}`, detail: `${(cost?.month.energy_kwh ?? 0).toLocaleString(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kWh ${t("tercatat")}`, tone: "green" }} /><DeviceStatus deviceStatus={device ? toDeviceStatus(device) : undefined} /><AlarmStatus alarms={alarms} /></div><DataHistory readings={history.slice(-5)} tariffPerKwh={cost?.tariff_per_kwh ?? 0} /></div>;
 }

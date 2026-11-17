@@ -12,7 +12,13 @@ export function readingInput(body: unknown): ReadingInput {
   if (numbers.some((field) => typeof input[field] !== "number" || !Number.isFinite(input[field]))) throw new HttpError(400, "Nilai pembacaan harus berupa angka");
   const ranges: Record<string, [number, number]> = { voltage: [0, 300], current: [0, 100], power: [0, 30000], energy: [0, 10000000], frequency: [40, 70], power_factor: [0, 1] };
   for (const field of numbers) { const [min, max] = ranges[field]; const value = input[field] as number; if (value < min || value > max) throw new HttpError(400, `${field} berada di luar rentang wajar`, { min, max }); }
-  const timestamp = typeof input.timestamp === "string" && !Number.isNaN(Date.parse(input.timestamp)) ? input.timestamp : undefined;
+  let timestamp: string | undefined;
+  if (input.timestamp !== undefined) {
+    if (typeof input.timestamp !== "string" || Number.isNaN(Date.parse(input.timestamp)) || !/(Z|[+-]\d{2}:\d{2})$/i.test(input.timestamp)) {
+      throw new HttpError(400, "timestamp harus berupa ISO-8601 dengan zona waktu, contoh 2026-11-17T12:30:00+07:00");
+    }
+    timestamp = input.timestamp;
+  }
   return { device_id: input.device_id, timestamp, voltage: input.voltage as number, current: input.current as number, power: input.power as number, energy: input.energy as number, frequency: input.frequency as number, power_factor: input.power_factor as number };
 }
 

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { SectionCard } from "@/components/ui/SectionCard";
 import { SeverityBadge, StatusBadge } from "@/components/ui/StatusBadge";
 import { useI18n } from "@/lib/i18n";
+import { formatWibDateTime } from "@/lib/datetime";
 
 export default function AlarmPage() {
   const { t, locale } = useI18n();
@@ -54,7 +55,7 @@ export default function AlarmPage() {
         const severity = alarm.type === "device_offline" ? "medium" : "high";
         return <div className="alarm-item" key={alarm.id}>
           <div className={`alarm-item-icon ${severity === "high" ? "red" : ""}`}><AlertTriangle size={18} /></div>
-          <div><strong>{t(notificationLabel(alarm.type))}</strong><span>{new Date(alarm.created_at).toLocaleString(locale === "EN" ? "en-US" : "id-ID")} · {t("Nilai")} {alarm.value} · {t("Batas")} {alarm.limit}</span></div>
+          <div><strong>{t(notificationLabel(alarm.type))}</strong><span>{formatWibDateTime(alarm.created_at, locale === "EN" ? "en-US" : "id-ID")} · {t("Nilai")} {alarm.value} · {t("Batas")} {alarm.limit}</span></div>
           <SeverityBadge severity={severity} />
           <span className={`status-badge ${alarm.is_read ? "status-green" : "status-amber"}`}><Bell size={13} />{alarm.is_read ? t("Sudah dibaca") : t("Belum dibaca")}</span>
           {!alarm.is_read && <button className="secondary-button" onClick={() => void markRead(alarm.id)}><Check size={14} />{t("Tandai dibaca")}</button>}

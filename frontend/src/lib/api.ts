@@ -1,4 +1,5 @@
 import type { DeviceStatus } from "@/types/energy";
+import { formatWibDateTime } from "@/lib/datetime";
 
 export type Reading = { device_id: string; timestamp: string; voltage: number; current: number; power: number; energy: number; frequency: number; power_factor: number };
 export type Settings = { device_id: string; tariff_class: string; tariff_per_kwh: number; power_limit_w: number; max_current_limit_a: number; daily_energy_limit_kwh: number; daily_cost_limit_rp: number };
@@ -32,4 +33,4 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 }
 
 export function isApiConfigured() { return Boolean(process.env.NEXT_PUBLIC_API_URL); }
-export function toDeviceStatus(status: ApiDeviceStatus): DeviceStatus { return { name: status.name, deviceId: status.device_id, online: status.is_online, lastUpdate: status.last_seen ? new Date(status.last_seen).toLocaleString("id-ID") : "Belum ada data", wifi: status.is_online ? "Terhubung" : "Terputus", sensor: "PZEM-004T", lcd: status.is_online ? "Aktif" : "Tidak aktif" }; }
+export function toDeviceStatus(status: ApiDeviceStatus): DeviceStatus { return { name: status.name, deviceId: status.device_id, online: status.is_online, lastUpdate: status.last_seen ? formatWibDateTime(status.last_seen) : "Belum ada data", wifi: status.is_online ? "Terhubung" : "Terputus", sensor: "PZEM-004T", lcd: status.is_online ? "Aktif" : "Tidak aktif" }; }
