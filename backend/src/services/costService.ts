@@ -11,7 +11,10 @@ function usageSince(rows: MeterRow[], start: Date) {
     const timestamp = new Date(row.ts);
     if (timestamp < start) { previous = row; continue; }
     // If this is the first-ever stored meter sample, its counter is the best available baseline.
-    const delta = previous ? row.energy - previous.energy : row.energy;
+    const meterDelta = previous ? row.energy - previous.energy : row.energy;
+    // The LCD energy counter can be reset to zero by the firmware. Treat a
+    // downward counter jump as a new counter baseline, then count its value.
+    const delta = meterDelta < 0 ? row.energy : meterDelta;
     if (delta >= 0) { energy += delta; cost += delta * row.tariff_per_kwh; }
     previous = row;
   }

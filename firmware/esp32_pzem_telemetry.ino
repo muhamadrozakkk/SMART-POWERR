@@ -229,7 +229,9 @@ void sendTelemetry(float voltage, float current, float power, float energy,
   doc["voltage"] = voltage;
   doc["current"] = current;
   doc["power"] = power;
-  doc["energy"] = energy; // Nilai kWh kumulatif asli dari PZEM, tanpa offset LCD.
+  // Kirim energi yang sama dengan E di LCD (counter PZEM dikurangi offset reset).
+  // Dengan begitu biaya web dan energi terbaru mengikuti tampilan perangkat.
+  doc["energy"] = energy;
   doc["tariff_per_kwh"] = tarif[dayaIndex]; // Tarif aktif yang juga dipakai menghitung biaya di LCD.
   doc["frequency"] = frequency;
   doc["power_factor"] = powerFactor;
@@ -417,7 +419,7 @@ void loop() {
 
   if (sampleDue && wifiConnected) {
     lastTelemetrySend = now;
-    sendTelemetry(voltage, current, power, energyRaw, frequency, powerFactor);
+    sendTelemetry(voltage, current, power, energyDisplay, frequency, powerFactor);
   } else if (sampleDue) {
     Serial.println("Sampel valid, tetapi Wi-Fi offline; pengiriman dilewati.");
   }

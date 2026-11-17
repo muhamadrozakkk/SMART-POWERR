@@ -1,4 +1,5 @@
 "use client";
+
 import { useCallback, useEffect, useState } from "react";
 import { Radio, TimerReset } from "lucide-react";
 import { apiRequest, ApiRequestError, type ApiDeviceStatus, type Reading, toDeviceStatus } from "@/lib/api";
@@ -11,11 +12,55 @@ import { MonitoringInsight } from "@/components/dashboard/MonitoringInsight";
 import { formatWibTime } from "@/lib/datetime";
 
 export default function MonitoringPage() {
-  const [latest, setLatest] = useState<Reading | null>(null); const [history, setHistory] = useState<Reading[]>([]); const [device, setDevice] = useState<ApiDeviceStatus | null>(null); const [devices, setDevices] = useState<Array<{ device_id: string; name: string }>>([]); const [selectedDevice, setSelectedDevice] = useState(""); const [error, setError] = useState("");
-  const load = useCallback(async () => { try { const available = await apiRequest<{ data: Array<{ device_id: string; name: string }> }>("/api/devices"); setDevices(available.data); const deviceId = available.data.some((item) => item.device_id === selectedDevice) ? selectedDevice : available.data[0]?.device_id; if (!deviceId) { setError("Belum ada perangkat yang ditautkan ke akun ini."); setLatest(null); setHistory([]); setDevice(null); return; } if (deviceId !== selectedDevice) setSelectedDevice(deviceId); const query = `device_id=${encodeURIComponent(deviceId)}`; const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(); const [rows, status] = await Promise.all([apiRequest<{ data: Reading[] }>(`/api/telemetry/history?${query}&from=${encodeURIComponent(from)}&interval=hour`), apiRequest<{ data: ApiDeviceStatus }>(`/api/device?${query}`)]); let current: Reading | null = null; try { current = await apiRequest<Reading>(`/api/telemetry/latest?${query}`); } catch (reason) { if (!(reason instanceof ApiRequestError && reason.status === 404 && reason.message.toLowerCase().includes("belum ada pembacaan"))) throw reason; } setLatest(current); setHistory(rows.data); setDevice(status.data); setError(""); } catch (reason) { setError(reason instanceof Error ? reason.message : "Data monitoring gagal dimuat"); } }, [selectedDevice]);
+  const [latest, setLatest] = useState<Reading | null>(null);
+  const [history, setHistory] = useState<Reading[]>([]);
+  const [device, setDevice] = useState<ApiDeviceStatus | null>(null);
+  const [devices, setDevices] = useState<Array<{ device_id: string; name: string }>>([]);
+  const [selectedDevice, setSelectedDevice] = useState("");
+  const [error, setError] = useState("");
+  const load = useCallback(async () => {
+    try {
+      const available = await apiRequest<{ data: Array<{ device_id: string; name: string }> }>("/api/devices");
+      setDevices(available.data);
+      const deviceId = available.data.some((item) => item.device_id === selectedDevice) ? selectedDevice : available.data[0]?.device_id;
+      if (!deviceId) { setError("Belum ada perangkat yang ditautkan ke akun ini."); setLatest(null); setHistory([]); setDevice(null); return; }
+      if (deviceId !== selectedDevice) setSelectedDevice(deviceId);
+      const query = `device_id=${encodeURIComponent(deviceId)}`;
+      const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const [rows, status] = await Promise.all([
+        apiRequest<{ data: Reading[] }>(`/api/telemetry/history?${query}&from=${encodeURIComponent(from)}&interval=hour`),
+        apiRequest<{ data: ApiDeviceStatus }>(`/api/device?${query}`),
+      ]);
+      let current: Reading | null = null;
+      try { current = await apiRequest<Reading>(`/api/telemetry/latest?${query}`); }
+      catch (reason) { if (!(reason instanceof ApiRequestError && reason.status === 404 && reason.message.toLowerCase().includes("belum ada pembacaan"))) throw reason; }
+      setLatest(current); setHistory(rows.data); setDevice(status.data); setError("");
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Data monitoring gagal dimuat"); }
+  }, [selectedDevice]);
   useEffect(() => { const initial = window.setTimeout(() => void load(), 0); const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 60000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [load]);
-  if (!latest) return <><PageHeader title="Pemantauan Langsung" description="Pantau enam parameter listrik dari perangkat PZEM-004T." action={<OnlineBadge>Offline</OnlineBadge>} />{error && <p className="settings-status">{error}</p>}<div className="empty-state"><strong>Menunggu data nyata dari ESP32</strong><span>Nilai sensor dan grafik akan tampil setelah pembacaan pertama tersimpan di backend.</span><button className="secondary-button" onClick={() => void load()}>Periksa lagi</button></div></>;
+  if (!latest) return <><PageHeader title="Pemantauan Langsung" description="Pantau parameter listrik dan estimasi biaya dari perangkat PZEM-004T." action={<OnlineBadge>Offline</OnlineBadge>} />{error && <p className="settings-status">{error}</p>}<div className="empty-state"><strong>Menunggu data nyata dari ESP32</strong><span>Nilai sensor dan grafik akan tampil setelah pembacaan pertama tersimpan di backend.</span><button className="secondary-button" onClick={() => void load()}>Periksa lagi</button></div></>;
+
   const current = latest;
-  const stats = [{ label: "Tegangan", value: `${current.voltage} V`, detail: "Pembacaan terbaru", icon: "gauge" as const, tone: "purple" }, { label: "Arus", value: `${current.current} A`, detail: "Pembacaan terbaru", icon: "activity" as const, tone: "blue" }, { label: "Daya aktif", value: `${current.power} W`, detail: "Pembacaan terbaru", icon: "zap" as const, tone: "green" }, { label: "Energi", value: `${current.energy} kWh`, detail: "Meter kumulatif", icon: "bolt" as const, tone: "amber" }, { label: "Frekuensi", value: `${current.frequency} Hz`, detail: "Pembacaan terbaru", icon: "activity" as const, tone: "blue" }, { label: "Faktor daya", value: String(current.power_factor), detail: "Pembacaan terbaru", icon: "gauge" as const, tone: "purple" }];
-  return <><PageHeader title="Pemantauan Langsung" description="Pantau enam parameter listrik dari perangkat PZEM-004T secara real-time." action={<OnlineBadge>{device?.is_online ? "Online" : "Offline"}</OnlineBadge>} />{devices.length > 0 && <label className="form-field" style={{ maxWidth: 420, marginBottom: 16 }}><span>Pilih perangkat</span><select className="input-control" value={selectedDevice} onChange={(event) => setSelectedDevice(event.target.value)}>{devices.map((item) => <option key={item.device_id} value={item.device_id}>{item.name} · {item.device_id}</option>)}</select></label>}{error ? <p className="settings-status">{error} <button className="text-button" onClick={() => void load()}>Coba lagi</button></p> : null}<StatGrid stats={stats} /><MonitoringInsight latest={current} history={history} /><div className="two-column"><PowerChart data={history.map((row) => ({ time: formatWibTime(row.timestamp).slice(0, 5), power: row.power, energy: row.energy, current: row.current, voltage: row.voltage }))} /><SectionCard title="Status pembacaan"><div className="data-highlight"><div><span>Pembaruan terakhir</span><strong>{device ? toDeviceStatus(device).lastUpdate : "Memuat..."}</strong><span>{device?.is_online ? "Perangkat terhubung" : "Data yang tampil adalah data terakhir"}</span></div><Radio size={33} color={device?.is_online ? "#32d86b" : "#ffb619"} /></div><div className="info-list"><div className="info-row"><span>Frekuensi</span><strong>{current.frequency} Hz</strong></div><div className="info-row"><span>Faktor daya</span><strong>{current.power_factor}</strong></div><div className="info-row"><span>Status perangkat</span><OnlineBadge>{device?.is_online ? "Online" : "Offline"}</OnlineBadge></div><div className="info-row"><span>Sumber data</span><strong>Backend API</strong></div></div></SectionCard></div><SectionCard title="Keterangan"><div className="empty-state"><TimerReset size={24} /><strong>Polling aktif setiap 1 menit</strong><span>Data sensor diperbarui setiap 1 menit; polling berhenti sementara ketika tab browser tidak aktif.</span></div></SectionCard></>;
+  const tariff = current.tariff_per_kwh ?? 0;
+  const stats = [
+    { label: "Tegangan", value: `${current.voltage} V`, detail: "Pembacaan terbaru", icon: "gauge" as const, tone: "purple" },
+    { label: "Arus", value: `${current.current} A`, detail: "Pembacaan terbaru", icon: "activity" as const, tone: "blue" },
+    { label: "Daya aktif", value: `${current.power} W`, detail: "Pembacaan terbaru", icon: "zap" as const, tone: "green" },
+    { label: "Energi terbaru", value: `${current.energy.toFixed(3)} kWh`, detail: "Sesuai angka E pada LCD", icon: "bolt" as const, tone: "amber" },
+    { label: "Biaya meter", value: `Rp ${(current.energy * tariff).toLocaleString("id-ID", { maximumFractionDigits: 0 })}`, detail: `Tarif Rp ${tariff.toLocaleString("id-ID")} / kWh`, icon: "activity" as const, tone: "green" },
+    { label: "Frekuensi", value: `${current.frequency} Hz`, detail: "Pembacaan terbaru", icon: "activity" as const, tone: "blue" },
+    { label: "Faktor daya", value: String(current.power_factor), detail: "Pembacaan terbaru", icon: "gauge" as const, tone: "purple" },
+  ];
+  return <>
+    <PageHeader title="Pemantauan Langsung" description="Pantau parameter listrik dan estimasi biaya dari perangkat PZEM-004T secara real-time." action={<OnlineBadge>{device?.is_online ? "Online" : "Offline"}</OnlineBadge>} />
+    {devices.length > 0 && <label className="form-field" style={{ maxWidth: 420, marginBottom: 16 }}><span>Pilih perangkat</span><select className="input-control" value={selectedDevice} onChange={(event) => setSelectedDevice(event.target.value)}>{devices.map((item) => <option key={item.device_id} value={item.device_id}>{item.name} · {item.device_id}</option>)}</select></label>}
+    {error ? <p className="settings-status">{error} <button className="text-button" onClick={() => void load()}>Coba lagi</button></p> : null}
+    <StatGrid stats={stats} />
+    <MonitoringInsight latest={current} history={history} />
+    <div className="two-column">
+      <PowerChart data={history.map((row) => ({ time: formatWibTime(row.timestamp).slice(0, 5), power: row.power, energy: row.energy, cost: row.cost_rp ?? 0, current: row.current, voltage: row.voltage }))} />
+      <SectionCard title="Status pembacaan"><div className="data-highlight"><div><span>Pembaruan terakhir</span><strong>{device ? toDeviceStatus(device).lastUpdate : "Memuat..."}</strong><span>{device?.is_online ? "Perangkat terhubung" : "Data yang tampil adalah data terakhir"}</span></div><Radio size={33} color={device?.is_online ? "#32d86b" : "#ffb619"} /></div><div className="info-list"><div className="info-row"><span>Frekuensi</span><strong>{current.frequency} Hz</strong></div><div className="info-row"><span>Faktor daya</span><strong>{current.power_factor}</strong></div><div className="info-row"><span>Status perangkat</span><OnlineBadge>{device?.is_online ? "Online" : "Offline"}</OnlineBadge></div><div className="info-row"><span>Sumber data</span><strong>Backend API</strong></div></div></SectionCard>
+    </div>
+    <SectionCard title="Keterangan"><div className="empty-state"><TimerReset size={24} /><strong>Polling aktif setiap 1 menit</strong><span>Data sensor diperbarui setiap 1 menit; polling berhenti sementara ketika tab browser tidak aktif.</span></div></SectionCard>
+  </>;
 }

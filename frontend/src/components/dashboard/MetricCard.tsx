@@ -1,12 +1,12 @@
 "use client";
 
-import { Activity, BatteryCharging, Bolt, Gauge, Waves } from "lucide-react";
+import { Activity, BatteryCharging, Bolt, Gauge, Receipt, Waves } from "lucide-react";
 import type { EnergyReading } from "@/types/energy";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 
-const iconMap = { bolt: Bolt, current: Activity, voltage: Gauge, wave: Waves, energy: BatteryCharging };
+const iconMap = { bolt: Bolt, current: Activity, voltage: Gauge, wave: Waves, energy: BatteryCharging, cost: Receipt };
 const accentMap: Record<string, { icon: string; line: string }> = {
   blue: { icon: "icon-blue", line: "#3eaaf7" }, sky: { icon: "icon-sky", line: "#249cf2" }, purple: { icon: "icon-purple", line: "#9951ed" }, amber: { icon: "icon-amber", line: "#ffb414" }, green: { icon: "icon-green", line: "#2ccf61" },
 };
