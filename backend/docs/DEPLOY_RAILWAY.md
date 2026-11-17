@@ -14,9 +14,10 @@ DEVELOPER_EMAIL=<email-admin>
 DEVELOPER_PASSWORD=<password-awal-minimal-12-karakter>
 DEVICE_API_KEY=<secret-acak-panjang-untuk-key-global-opsional>
 FRONTEND_URL=https://www.smartpower.web.id
+CORS_ORIGINS=https://www.smartpower.web.id,https://smartpower.web.id,https://smart-powerr.vercel.app
 ```
 
-Ganti `Postgres` pada reference variable sesuai nama service PostgreSQL Railway. `PORT` diisi otomatis oleh Railway. CORS backend dibatasi di kode ke `https://www.smartpower.web.id` dan `https://smartpower.web.id`; `CORS_ORIGINS` tidak diperlukan. `FRONTEND_URL` dipakai untuk membuat tautan reset password.
+Ganti `Postgres` pada reference variable sesuai nama service PostgreSQL Railway. `PORT` diisi otomatis oleh Railway. `CORS_ORIGINS` adalah daftar origin frontend dipisahkan koma; masukkan domain yang benar-benar dipakai untuk membuka website (tanpa path). Backend juga otomatis mengizinkan dua domain `smartpower.web.id`. `FRONTEND_URL` dipakai untuk membuat tautan reset password.
 
 Set variabel SMTP berikut jika fitur lupa password harus mengirim email (tidak diperlukan agar ESP32 dapat mengirim telemetry):
 

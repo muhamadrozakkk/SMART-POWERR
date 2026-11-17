@@ -26,7 +26,7 @@ Konfigurasikan variabel berikut di Railway sebelum deploy:
 - `AI_API_URL` — URL endpoint chat completions (default Gemini OpenAI compatibility: `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`).
 - `AI_MODEL` — nama model (default `gemini-3.5-flash-lite`). Free tier memiliki kuota dan rate limit dari provider. Jika provider gagal/kuota habis, endpoint beralih ke jawaban lokal kontekstual.
 - `FRONTEND_URL` — URL frontend untuk tautan reset password, misalnya `https://www.smartpower.web.id`.
-- CORS hanya mengizinkan `https://www.smartpower.web.id` dan `https://smartpower.web.id`; konfigurasi ini tidak membutuhkan `CORS_ORIGINS`.
+- `CORS_ORIGINS` â€” daftar origin frontend dipisahkan koma, misalnya `https://www.smartpower.web.id,https://smartpower.web.id,https://smart-powerr.vercel.app`. Origin harus tanpa path; garis miring di akhir akan dinormalisasi. Dua domain `smartpower.web.id` tetap diizinkan secara default.
 - `DEVICE_API_KEY` — kunci kompatibilitas untuk perangkat lama. Perangkat baru mendapat API key sendiri saat dibuat melalui `POST /api/devices`.
 - `NODE_ENV=production` — menandai deployment production dan menonaktifkan seed demo.
 

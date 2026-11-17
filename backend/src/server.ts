@@ -29,7 +29,7 @@ export const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(helmet());
-app.use(cors({ origin: (origin, callback) => { if (!origin || env.corsOrigins.includes(origin)) return callback(null, true); return callback(new Error("Origin tidak diizinkan oleh CORS")); }, credentials: true }));
+app.use(cors({ origin: (origin, callback) => { if (!origin || env.corsOrigins.includes(origin)) return callback(null, true); return callback(new Error(`Origin tidak diizinkan oleh CORS: ${origin}`)); }, credentials: true }));
 app.use("/api/user/avatar", express.json({ limit: "3mb" }), avatarRoutes);
 app.use(express.json({ limit: "32kb" }));
 
@@ -84,7 +84,8 @@ app.use(errorHandler);
 if (pool) {
   try {
     const created = await ensureDeveloperAccount();
-    console.log(created ? "Akun developer awal berhasil dibuat" : "Akun developer utama sudah tersedia");
+    if (created) console.log("Akun developer awal berhasil dibuat");
+    else if (env.developerEmail && env.developerPassword.length >= 12) console.log("Akun developer utama sudah tersedia");
   } catch (error) { console.error("Seed akun developer gagal:", error); }
 }
 const server = app.listen(env.port, () => console.log(`SMART POWER API berjalan di http://localhost:${env.port} (${env.timezone})`));

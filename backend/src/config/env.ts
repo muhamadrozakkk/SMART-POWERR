@@ -1,12 +1,21 @@
 import "dotenv/config";
 
+const productionCorsOrigins = ["https://www.smartpower.web.id", "https://smartpower.web.id"];
+const configuredCorsOrigins = (process.env.CORS_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+const developmentCorsOrigins = process.env.NODE_ENV === "production"
+  ? []
+  : ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"];
+
 export const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 4000),
   databaseUrl: process.env.DATABASE_URL ?? "",
   deviceApiKey: process.env.DEVICE_API_KEY ?? "",
   jwtSecret: process.env.JWT_SECRET ?? "",
-  corsOrigins: ["https://www.smartpower.web.id", "https://smartpower.web.id"],
+  corsOrigins: [...new Set([...productionCorsOrigins, ...configuredCorsOrigins, ...developmentCorsOrigins])],
   timezone: process.env.TZ ?? "Asia/Jakarta",
   developerEmail: process.env.DEVELOPER_EMAIL?.trim() ?? "",
   developerPassword: process.env.DEVELOPER_PASSWORD ?? "",
