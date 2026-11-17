@@ -62,8 +62,6 @@ const en: Record<string, string> = {
   "Belum ada notifikasi": "No notifications yet",
   "Suara AI: Aktif": "AI voice: On",
   "Suara AI: Bisu": "AI voice: Muted",
-  "Ambient On": "Ambient On",
-  "Ambient Muted": "Ambient Muted",
   "Deep Space: On": "Deep Space: On",
   "Deep Space: Off": "Deep Space: Off",
   "Kembali ke beranda": "Back to home",

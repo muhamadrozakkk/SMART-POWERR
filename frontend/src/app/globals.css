@@ -361,11 +361,6 @@ button:hover:not(:disabled) { transition-timing-function: cubic-bezier(.22,1,.36
 .splash-status { position: absolute; top: calc(50% + 175px); color: #b9cee5; font-size: 13px; letter-spacing: .04em; animation: assistant-pulse 1.4s ease-in-out infinite alternate; }.splash-progress { position: absolute; top: calc(50% + 214px); width: min(280px,70vw); height: 3px; overflow: hidden; border-radius: 9px; background: #ffffff1c; }.splash-progress span { display: block; width: 0; height: 100%; background: linear-gradient(90deg,#0ea5e9,#f59e0b); box-shadow: 0 0 18px #0ea5e9; animation: splash-progress-fill 5s linear forwards; }.splash-powered { position: absolute; bottom: 30px; color: #71859d; font-size: 10px; letter-spacing: .12em; }.splash-powered strong { color: #f5c665; }
 .app-footer, .landing-footer { position: relative; z-index: 1; border-color: #ffffff18; background: #04081288; backdrop-filter: blur(18px); }
 .language-toggle button.selected { color: #07111c; background: linear-gradient(120deg,#38bdf8,#fbbf24); border-radius: 6px; box-shadow: 0 2px 14px #0ea5e944; }
-.ambient-toggle { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 10px; color: #a9bdd3; background: rgba(10,24,42,.62); border: 1px solid #ffffff1c; border-radius: 999px; cursor: pointer; transition: color .3s cubic-bezier(.22,1,.36,1),background .3s,border-color .3s,box-shadow .3s,transform .3s; }
-.ambient-toggle > span { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #ffffff0a; }
-.ambient-toggle small { font-size: 10px; font-weight: 650; white-space: nowrap; }
-.ambient-toggle.active { color: #f4d38b; border-color: #f59e0b55; background: linear-gradient(110deg,#0ea5e916,#f59e0b12); box-shadow: 0 0 18px #f59e0b12; }
-.ambient-toggle:hover { transform: translateY(-1px); border-color: #f59e0b77; }
 .energy-insight { border-color: #0ea5e94f; background: linear-gradient(110deg,#0ea5e917,#f59e0b0d),rgba(7,15,29,.75); }
 @keyframes aurora-drift-a { from { translate: -3% -2%; rotate: -5deg; scale: .96; } to { translate: 7% 9%; rotate: 8deg; scale: 1.08; } }
 @keyframes aurora-drift-b { from { translate: 4% -3%; rotate: 7deg; scale: 1.05; } to { translate: -9% 7%; rotate: -8deg; scale: .94; } }
@@ -378,7 +373,7 @@ button:hover:not(:disabled) { transition-timing-function: cubic-bezier(.22,1,.36
 @keyframes orbit-spin { to { rotate: 360deg; } }
 @keyframes particle-glow { to { opacity: .35; transform: scale(.6); } }
 @media (max-width: 760px) { .app-sidebar { left: 0; top: 0; bottom: 0; border-radius: 0 20px 20px 0; }.main-area { margin-left: 0; }.profile-avatar-editor { align-items: flex-start; flex-direction: column; }.splash-orbit { width: 220px; height: 220px; }.splash-orbit--two { width: 260px; height: 180px; }.splash-status { top: calc(50% + 150px); }.splash-progress { top: calc(50% + 188px); } }
-@media (max-width: 760px) { .ambient-toggle { min-height: 34px; padding: 0 7px; gap: 4px; }.ambient-toggle small { font-size: 9px; }.ambient-toggle > span { width: 21px; height: 21px; }.topbar-actions { flex-wrap: wrap; justify-content: flex-end; } }
+@media (max-width: 760px) { .topbar-actions { flex-wrap: wrap; justify-content: flex-end; } }
 
 /* Keep the visual polish while limiting constant GPU work on everyday devices. */
 .aurora-orb { filter: blur(68px); opacity: .12; will-change: auto; }
@@ -392,10 +387,11 @@ button:hover:not(:disabled) { transition-timing-function: cubic-bezier(.22,1,.36
 .metric-card { min-width: 0; }
 .post-login-splash { min-height: 100dvh; }
 .splash-aurora { filter: blur(64px); opacity: .15; }
-.splash-core { position: absolute; z-index: 2; top: 50%; left: 50%; transform: translate(-50%,-50%); animation: splash-logo-float 3.5s ease-in-out infinite; }
+.splash-centerpiece { position: absolute; top: 50%; left: 50%; width: min(330px,82vw); aspect-ratio: 1; transform: translate(-50%,-50%); isolation: isolate; }
+.splash-core { position: absolute; z-index: 2; top: 50%; left: 50%; width: min(190px,54vw); height: min(190px,54vw); transform: translate(-50%,-50%); animation: splash-logo-float 3.5s ease-in-out infinite; }
 .splash-particles { position: absolute; inset: 0; pointer-events: none; }
-.splash-orbit { top: 50%; left: 50%; box-shadow: none; transform: translate(-50%,-50%); }
-.splash-orbit--two { transform: translate(-50%,-50%) rotate(-32deg); }
+.splash-orbit { z-index: 1; top: 50%; left: 50%; box-shadow: none; animation: orbit-spin-centered 13s linear infinite; }
+.splash-orbit--two { width: min(320px,80vw); height: min(230px,58vw); transform: translate(-50%,-50%) rotate(-32deg); animation: orbit-spin-tilted 17s linear infinite reverse; }
 .splash-progress span { animation-duration: 1.8s; }
 .primary-button::after, .login-submit::after { opacity: 0; animation: none; transition: opacity .2s ease; }
 .primary-button:hover::after, .login-submit:hover::after { opacity: 1; animation: button-shimmer .9s ease-out 1; }
@@ -403,4 +399,6 @@ button:hover:not(:disabled) { transition-timing-function: cubic-bezier(.22,1,.36
 @media (max-width: 760px) { .metrics-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
 @media (max-width: 360px) { .metrics-row { grid-template-columns: 1fr; } }
 @keyframes splash-logo-float { 0%,100% { transform: translate(-50%,-50%); } 50% { transform: translate(-50%,calc(-50% - 5px)); } }
+@keyframes orbit-spin-centered { from { transform: translate(-50%,-50%) rotate(0); } to { transform: translate(-50%,-50%) rotate(360deg); } }
+@keyframes orbit-spin-tilted { from { transform: translate(-50%,-50%) rotate(-32deg); } to { transform: translate(-50%,-50%) rotate(328deg); } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
