@@ -22,8 +22,8 @@ char pass[] = "123456789";
 
 // Backend SMARTPOWER.
 const char *API_URL = "https://smartpower-production.up.railway.app/api/telemetry";
-const char *API_KEY = "5bRXt4ViBKt9Z36uoSI76WZQfGGHsjVaGIwIy64alLI";
-const char *DEVICE_ID = "SPW-44E849D400E2A923";
+const char *API_KEY = "uqntZ77zsv2KwC2XjJk9Yw4i4FAoQQuLPhoGVLOez5U";
+const char *DEVICE_ID = "SPW-18BE5BF4E177ACEC";
 
 // Pin tetap sesuai rangkaian pada program lama.
 #define BTN_MENU 32
@@ -47,7 +47,6 @@ const int jumlahDaya = 5;
 int menu = 0;
 int dayaIndex = 1;
 float energyOffset = 0;
-unsigned long lastButton = 0;
 unsigned long holdStart = 0;
 unsigned long lastBlynkSend = 0;
 unsigned long lastTelemetrySend = 0;
@@ -56,6 +55,7 @@ unsigned long lastWifiRetry = 0;
 bool wifiConnected = false;
 bool rtcReady = false;
 bool hasValidReading = false;
+bool lcdNeedsRefresh = true;
 float latestVoltage = 0, latestCurrent = 0, latestPower = 0;
 float latestEnergy = 0, latestFrequency = 0, latestPowerFactor = 0;
 bool ntpSyncPending = false;
@@ -255,39 +255,45 @@ void sendTelemetry(float voltage, float current, float power, float energy,
 }
 
 void cekTombol() {
-  if (millis() - lastButton < 250) return;
+  struct ButtonState { int stable; int lastRead; unsigned long changedAt; };
+  static ButtonState menuButton{HIGH, HIGH, 0};
+  static ButtonState upButton{HIGH, HIGH, 0};
+  static bool upLongActionDone = false;
+  const unsigned long now = millis();
 
-  if (digitalRead(BTN_MENU) == LOW) {
-    menu++;
-    if (menu > 2) menu = 0;
+  auto updateButton = [now](ButtonState &button, int pin) {
+    const int reading = digitalRead(pin);
+    if (reading != button.lastRead) { button.lastRead = reading; button.changedAt = now; }
+    if (now - button.changedAt >= 35 && reading != button.stable) {
+      button.stable = reading;
+      return reading == LOW ? 1 : 2; // pressed / released
+    }
+    return 0;
+  };
+
+  if (updateButton(menuButton, BTN_MENU) == 1) {
+    menu = (menu + 1) % 3;
     lcd.clear();
-    lastButton = millis();
+    lcdNeedsRefresh = true;
   }
 
-  if (digitalRead(BTN_UP) == LOW) {
-    if (holdStart == 0) holdStart = millis();
-    if (menu == 1 && millis() - holdStart > 3000) {
-      const float meterEnergy = pzem.energy();
-      if (isfinite(meterEnergy)) {
-        energyOffset = meterEnergy;
-        simpanData();
-      }
-      lcd.clear();
-      lcd.print("RESET MANUAL");
-      delay(1500);
-      lcd.clear();
-      holdStart = 0;
-      lastButton = millis();
-    }
-  } else {
-    if (holdStart != 0 && millis() - holdStart < 3000 && menu == 2) {
-      dayaIndex++;
-      if (dayaIndex >= jumlahDaya) dayaIndex = 0;
+  const int upEvent = updateButton(upButton, BTN_UP);
+  if (upEvent == 1) { holdStart = now; upLongActionDone = false; }
+  if (upButton.stable == LOW && !upLongActionDone && menu == 1 && holdStart && now - holdStart >= 3000) {
+    const float meterEnergy = pzem.energy();
+    if (isfinite(meterEnergy)) { energyOffset = meterEnergy; simpanData(); }
+    Serial.println(isfinite(meterEnergy) ? "Energi meter berhasil direset." : "Reset energi dilewati: pembacaan PZEM tidak valid.");
+    upLongActionDone = true;
+    lcdNeedsRefresh = true;
+  }
+  if (upEvent == 2) {
+    if (!upLongActionDone && holdStart && now - holdStart < 3000 && menu == 2) {
+      dayaIndex = (dayaIndex + 1) % jumlahDaya;
       simpanData();
       lcd.clear();
+      lcdNeedsRefresh = true;
     }
     holdStart = 0;
-    lastButton = millis();
   }
 }
 
@@ -363,6 +369,7 @@ void loop() {
                     latestVoltage, latestCurrent, latestPower, latestEnergy,
                     latestFrequency, latestPowerFactor);
     } else {
+      lcdNeedsRefresh = true;
       Serial.printf("Sampel sensor (interval 60 detik): V=%.2f V, I=%.3f A, P=%.2f W, E=%.4f kWh, f=%.2f Hz, PF=%.3f\n",
                     latestVoltage, latestCurrent, latestPower, latestEnergy,
                     latestFrequency, latestPowerFactor);
@@ -388,29 +395,24 @@ void loop() {
   if (energyDisplay < 0) energyDisplay = 0;
   const float biaya = energyDisplay * tarif[dayaIndex];
 
-  if (menu == 0) {
-    lcd.setCursor(0, 0);
-    lcd.printf("V:%.1f I:%.2f", voltage, current);
-    lcd.setCursor(0, 1);
-    lcd.printf("P:%.1f W             ", power);
-    lcd.setCursor(0, 2);
-    lcd.printf("F:%.1fHz PF:%.2f     ", frequency, powerFactor);
-  } else if (menu == 1) {
-    lcd.setCursor(0, 0);
-    lcd.printf("E:%.3f kWh          ", energyDisplay);
-    lcd.setCursor(0, 1);
-    lcd.printf("Biaya: Rp %.0f      ", biaya);
-    lcd.setCursor(0, 2);
-    lcd.printf("Meter: %.3f kWh     ", energyRaw);
-  } else {
-    lcd.setCursor(0, 0);
-    lcd.printf("Daya %d VA          ", dayaVA[dayaIndex]);
-    lcd.setCursor(0, 1);
-    lcd.print(subsidi[dayaIndex] ? "Subsidi             " : "Non Subsidi         ");
-    lcd.setCursor(0, 2);
-    lcd.printf("Tarif Rp %.2f/kWh   ", tarif[dayaIndex]);
+  if (lcdNeedsRefresh) {
+    if (menu == 0) {
+      lcd.setCursor(0, 0); lcd.printf("V:%.1f I:%.2f       ", voltage, current);
+      lcd.setCursor(0, 1); lcd.printf("P:%.1f W            ", power);
+      lcd.setCursor(0, 2); lcd.printf("F:%.1fHz PF:%.2f    ", frequency, powerFactor);
+    } else if (menu == 1) {
+      lcd.setCursor(0, 0); lcd.printf("E:%.3f kWh         ", energyDisplay);
+      lcd.setCursor(0, 1); lcd.printf("Biaya: Rp %.0f     ", biaya);
+      lcd.setCursor(0, 2); lcd.printf("Meter: %.3f kWh    ", energyRaw);
+    } else {
+      lcd.setCursor(0, 0); lcd.printf("Daya %d VA         ", dayaVA[dayaIndex]);
+      lcd.setCursor(0, 1); lcd.print(subsidi[dayaIndex] ? "Subsidi            " : "Non Subsidi        ");
+      lcd.setCursor(0, 2); lcd.printf("Tarif Rp %.2f/kWh  ", tarif[dayaIndex]);
+    }
+    lcdNeedsRefresh = false;
   }
-  displayTimestamp();
+  static unsigned long lastDisplayClock = 0;
+  if (now - lastDisplayClock >= 1000) { displayTimestamp(); lastDisplayClock = now; }
 
   if (sampleDue && wifiConnected) {
     lastTelemetrySend = now;
