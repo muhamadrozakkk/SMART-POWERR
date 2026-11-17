@@ -392,7 +392,7 @@ button:hover:not(:disabled) { transition-timing-function: cubic-bezier(.22,1,.36
 .splash-particles { position: absolute; inset: 0; pointer-events: none; }
 .splash-orbit { z-index: 1; top: 50%; left: 50%; box-shadow: none; animation: orbit-spin-centered 13s linear infinite; }
 .splash-orbit--two { width: min(320px,80vw); height: min(230px,58vw); transform: translate(-50%,-50%) rotate(-32deg); animation: orbit-spin-tilted 17s linear infinite reverse; }
-.splash-progress span { animation-duration: 1.8s; }
+.splash-progress span { animation-duration: 4s; }
 .primary-button::after, .login-submit::after { opacity: 0; animation: none; transition: opacity .2s ease; }
 .primary-button:hover::after, .login-submit:hover::after { opacity: 1; animation: button-shimmer .9s ease-out 1; }
 @media (max-width: 1260px) { .metrics-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

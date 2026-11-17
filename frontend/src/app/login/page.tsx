@@ -48,11 +48,11 @@ export default function LoginPage() {
       document.cookie = "spw_auth=1; path=/; max-age=28800; samesite=lax";
       document.cookie = `spw_role=${role}; path=/; max-age=28800; samesite=lax`;
       setTransitionTarget(role === "DEVELOPER" ? "/dashboard/developer" : "/dashboard/user");
-      window.setTimeout(() => setTransitionExiting(true), 1550);
+      window.setTimeout(() => setTransitionExiting(true), 3500);
       window.setTimeout(() => {
         window.dispatchEvent(new Event("spw:login-success"));
         router.push(role === "DEVELOPER" ? "/dashboard/developer" : "/dashboard/user");
-      }, 1800);
+      }, 4000);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Tidak dapat menghubungi server. Coba lagi.");
     } finally {
