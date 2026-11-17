@@ -21,5 +21,5 @@ export function AnimatedAuroraBackground() {
     window.addEventListener("pointermove", move, { passive: true });
     return () => { window.removeEventListener("pointermove", move); if (frame) cancelAnimationFrame(frame); };
   }, []);
-  return <div className="aurora-background" aria-hidden="true"><div className="aurora-orb aurora-orb--blue" /><div className="aurora-orb aurora-orb--indigo" /><div className="aurora-orb aurora-orb--gold" /><div className="aurora-ribbons" /><div className="aurora-noise" /></div>;
+  return <div className="aurora-background" aria-hidden="true"><div className="aurora-orb aurora-orb--blue" /><div className="aurora-orb aurora-orb--indigo" /><div className="aurora-orb aurora-orb--gold" /><div className="aurora-ribbons" /><div className="aurora-sparkles"><i /><i /><i /><i /><i /><i /><i /><i /></div><div className="aurora-noise" /></div>;
 }
