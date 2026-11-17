@@ -277,6 +277,57 @@ html, body { width: 100%; min-width: 0; overflow-x: hidden; overflow-y: auto; }
 
 .status-dot-offline { background: #8599ad; box-shadow: none; }
 
+/* User device setup and settings: consistent spacing, clean responsive form flow. */
+.user-dashboard-stack, .devices-page-stack { display: grid; gap: 18px; min-width: 0; }
+.device-registration-card, .user-controls-card { margin: 0; }
+.device-registration-intro { margin: 0 0 18px; max-width: 780px; line-height: 1.6; }
+.device-registration-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: 14px; align-items: end; }
+.device-registration-form .form-field, .user-controls-form .form-field { display: flex; flex-direction: column; gap: 8px; color: #dce7f3; font-size: 12px; }
+.device-registration-form .primary-button { min-height: 42px; white-space: nowrap; }
+.device-credentials { display: grid; gap: 10px; margin-top: 18px; padding: 16px; border: 1px solid #24537d; border-radius: 12px; background: #082342; }
+.device-credentials h3 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 15px; }
+.device-credentials h3 svg { color: #37d68a; }
+.device-credentials > p { margin: 0; color: #adbed1; font-size: 12px; line-height: 1.5; }
+.device-credential-row { display: grid; grid-template-columns: 105px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 9px; border: 1px solid #1c4268; border-radius: 9px; background: #0b2a4c; }
+.device-credential-row > span { display: flex; align-items: center; gap: 6px; color: #c2d5e9; font-size: 11px; }
+.device-credential-row code { min-width: 0; overflow-wrap: anywhere; color: #f2f7fd; font-size: 11px; }
+.device-credential-row .secondary-button { min-height: 34px; padding: 7px 10px; }
+.device-setup-note { display: flex; align-items: flex-start; gap: 9px; padding: 11px; color: #b8cee4; border-radius: 8px; background: #0c3155; font-size: 11px; line-height: 1.5; }
+.device-setup-note svg { flex: 0 0 auto; color: #62baff; }
+.user-controls-card .panel-heading { margin-bottom: 16px; }
+.user-controls-card .panel-heading p { margin: 6px 0 0; font-size: 12px; line-height: 1.5; }
+.user-controls-form { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 18px; }
+.user-controls-form > div { min-width: 0; }
+.user-controls-form > div p { max-width: 480px; margin: 10px 0 0; font-size: 11px !important; line-height: 1.5; }
+.user-settings-empty { margin: 0; }
+.registered-device-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.registered-device { display: grid; gap: 12px; min-width: 0; padding: 16px; border: 1px solid #244a70; border-radius: 11px; background: #092544; }
+.registered-device-main { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.registered-device-icon { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 auto; color: #72c4ff; border: 1px solid #2a6799; border-radius: 10px; background: #0b3762; }
+.registered-device-main h3 { margin: 0; overflow-wrap: anywhere; font-size: 15px; }
+.registered-device-main p { display: flex; align-items: center; gap: 5px; margin: 6px 0 0; color: #a9bdd4; font-size: 11px; }
+.registered-device-id { overflow-wrap: anywhere; color: #d7e8f8; font-size: 12px; }
+.registered-device-status { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; }
+.registered-device-status.is-online { color: #47dc91; }.registered-device-status.is-offline { color: #a8b7c7; }
+.registered-device > small { color: #94abc2; line-height: 1.5; }
+.devices-empty { min-height: 170px; }
+.dashboard-waiting { min-height: 205px; padding: 28px; border: 1px dashed #2a5279; border-radius: 12px; background: #071d38aa; }
+.dashboard-waiting > span { max-width: 720px; line-height: 1.65; }
+@media (max-width: 900px) {
+  .device-registration-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .device-registration-form > button { grid-column: 1 / -1; justify-self: start; }
+  .registered-device-list { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .device-registration-form, .user-controls-form { grid-template-columns: 1fr; gap: 13px; }
+  .device-registration-form > button { width: 100%; }
+  .device-credential-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .device-credential-row > span { grid-column: 1 / -1; }
+  .device-credential-row code { font-size: 10px; }
+  .device-credentials { padding: 11px; }
+  .dashboard-waiting { padding: 20px 14px; }
+}
+
 /* SmartPower dashboard refresh */
 :root { --bg: #061124; --sidebar: #061124; --panel: #0b1c38; --panel-2: #102747; --border: #1b3e63; --text: #f3f7fd; --muted: #a9bdd4; }
 .app-shell { position: relative; isolation: isolate; background: radial-gradient(ellipse at 78% 0, #0c2c4a 0, transparent 34%), #061124; }

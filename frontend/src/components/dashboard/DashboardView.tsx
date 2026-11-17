@@ -66,8 +66,8 @@ export function DashboardView() {
       setError("");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Data dashboard gagal dimuat"); }
   }, [period, selectedDevice]);
-  useEffect(() => { const initial = window.setTimeout(() => void load(), 0); const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 5000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [load]);
-  if (!latest) return <div className="empty-state"><strong>{t("Menunggu data dari ESP32")}</strong><span>{error || t(devices.length ? "Belum ada pembacaan tersimpan. Periksa koneksi dan API key ESP32." : "Belum ada perangkat yang ditautkan ke akun ini.")} {t("Data akan tampil setelah pembacaan nyata tersimpan.")}</span><button className="secondary-button" onClick={() => void load()}>{t("Periksa lagi")}</button></div>;
+  useEffect(() => { const initial = window.setTimeout(() => void load(), 0); const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 5000); const onDeviceAdded = () => void load(); window.addEventListener("spw:device-added", onDeviceAdded); return () => { window.clearTimeout(initial); window.clearInterval(timer); window.removeEventListener("spw:device-added", onDeviceAdded); }; }, [load]);
+  if (!latest) return <div className="empty-state dashboard-waiting"><strong>{t("Menunggu data dari ESP32")}</strong><span>{error || t(devices.length ? "Perangkat sudah tertaut. Pastikan ESP32 menyala dan mengirim data dengan Device ID serta API Key yang benar." : "Belum ada perangkat yang ditautkan ke akun ini.")} {t("Data akan tampil setelah pembacaan nyata tersimpan.")}</span><button className="secondary-button" onClick={() => void load()}>{t("Periksa lagi")}</button></div>;
   const current = latest;
   const trend = (field: "power" | "current" | "voltage" | "power_factor" | "energy" | "frequency") => history.slice(-7).map((row) => row[field]);
   const metricInfo: Array<Pick<EnergyReading, "label" | "unit" | "icon" | "accent"> & { value: number; field: "power" | "current" | "voltage" | "power_factor" | "frequency" | "energy"; detail: string }> = [
