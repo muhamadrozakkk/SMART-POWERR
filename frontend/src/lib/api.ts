@@ -1,9 +1,9 @@
 import type { DeviceStatus } from "@/types/energy";
 import { formatWibDateTime } from "@/lib/datetime";
 
-export type Reading = { device_id: string; timestamp: string; voltage: number; current: number; power: number; energy: number; frequency: number; power_factor: number };
+export type Reading = { device_id: string; timestamp: string; voltage: number; current: number; power: number; energy: number; frequency: number; power_factor: number; tariff_per_kwh?: number; cost_rp?: number };
 export type Settings = { device_id: string; tariff_class: string; tariff_per_kwh: number; power_limit_w: number; max_current_limit_a: number; daily_energy_limit_kwh: number; daily_cost_limit_rp: number };
-export type CostSummary = { device_id: string; tariff_per_kwh: number; today: { energy_kwh: number; cost_rp: number }; month: { energy_kwh: number; cost_rp: number }; projection: { energy_kwh: number; cost_rp: number } };
+export type CostSummary = { device_id: string; tariff_per_kwh: number; meter: { energy_kwh: number; cost_rp: number }; today: { energy_kwh: number; cost_rp: number }; month: { energy_kwh: number; cost_rp: number }; projection: { energy_kwh: number; cost_rp: number } };
 export type ApiNotification = { id: number; device_id: string; type: "power_limit" | "current_limit" | "energy_limit" | "cost_limit" | "device_offline"; value: number; limit: number; created_at: string; is_read: boolean };
 export type ApiDeviceStatus = { device_id: string; name: string; is_online: boolean; last_seen: string | null };
 

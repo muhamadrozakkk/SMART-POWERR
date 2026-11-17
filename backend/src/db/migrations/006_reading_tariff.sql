@@ -1,0 +1,2 @@
+ALTER TABLE readings
+  ADD COLUMN IF NOT EXISTS tariff_per_kwh NUMERIC(12,2);

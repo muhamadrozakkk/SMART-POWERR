@@ -230,6 +230,7 @@ void sendTelemetry(float voltage, float current, float power, float energy,
   doc["current"] = current;
   doc["power"] = power;
   doc["energy"] = energy; // Nilai kWh kumulatif asli dari PZEM, tanpa offset LCD.
+  doc["tariff_per_kwh"] = tarif[dayaIndex]; // Tarif aktif yang juga dipakai menghitung biaya di LCD.
   doc["frequency"] = frequency;
   doc["power_factor"] = powerFactor;
   const String timestamp = rtcTimestampWib();
