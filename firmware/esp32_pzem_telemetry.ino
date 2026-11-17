@@ -51,9 +51,13 @@ unsigned long lastButton = 0;
 unsigned long holdStart = 0;
 unsigned long lastBlynkSend = 0;
 unsigned long lastTelemetrySend = 0;
+unsigned long lastSensorRead = 0;
 unsigned long lastWifiRetry = 0;
 bool wifiConnected = false;
 bool rtcReady = false;
+bool hasValidReading = false;
+float latestVoltage = 0, latestCurrent = 0, latestPower = 0;
+float latestEnergy = 0, latestFrequency = 0, latestPowerFactor = 0;
 bool ntpSyncPending = false;
 unsigned long lastRtcSyncAttempt = 0;
 unsigned long lastRtcLog = 0;
@@ -105,12 +109,16 @@ String rtcTimestampWib() {
 }
 
 void printRtcTime() {
-  if (millis() - lastRtcLog < 1000) return;
-  lastRtcLog = millis();
   if (!rtcReady) {
-    Serial.println("RTC DS3231 tidak tersedia; monitoring lokal tetap berjalan.");
+    static bool rtcUnavailableLogged = false;
+    if (!rtcUnavailableLogged) {
+      Serial.println("RTC DS3231 tidak terdeteksi saat boot; periksa SDA=21, SCL=22, VCC, GND, dan alamat 0x68.");
+      rtcUnavailableLogged = true;
+    }
     return;
   }
+  if (millis() - lastRtcLog < SEND_INTERVAL_MS) return;
+  lastRtcLog = millis();
   const DateTime now = rtc.now();
   Serial.printf("RTC WIB: %02d-%02d-%04d %02d:%02d:%02d\n",
                 now.day(), now.month(), now.year(), now.hour(), now.minute(), now.second());
@@ -191,13 +199,14 @@ bool connectWiFiAtStartup() {
 
 void maintainWiFi() {
   const bool wasConnected = wifiConnected;
-  wifiConnected = WiFi.status() == WL_CONNECTED;
+  const wl_status_t status = WiFi.status();
+  wifiConnected = status == WL_CONNECTED;
   if (wifiConnected && !wasConnected) beginNtpSync();
   if (wifiConnected || millis() - lastWifiRetry < 10000) return;
+  if (status != WL_DISCONNECTED && status != WL_CONNECT_FAILED && status != WL_NO_SSID_AVAIL) return;
 
   lastWifiRetry = millis();
   Serial.println("Wi-Fi terputus; mencoba sambung ulang...");
-  WiFi.disconnect(false);
   WiFi.begin(ssid, pass);
 }
 
@@ -318,6 +327,7 @@ void setup() {
   secureClient.setInsecure();
   delay(1500);
   lcd.clear();
+  lastSensorRead = millis() - SEND_INTERVAL_MS;
   lastBlynkSend = millis() - SEND_INTERVAL_MS;
   lastTelemetrySend = millis() - SEND_INTERVAL_MS;
 }
@@ -335,25 +345,45 @@ void loop() {
     Blynk.run();
   }
 
-  const float voltage = pzem.voltage();
-  const float current = pzem.current();
-  const float power = pzem.power();
-  const float energyRaw = pzem.energy();
-  const float frequency = pzem.frequency();
-  const float powerFactor = pzem.pf();
+  const unsigned long now = millis();
+  const bool sampleDue = now - lastSensorRead >= SEND_INTERVAL_MS;
+  if (sampleDue) {
+    lastSensorRead = now;
+    latestVoltage = pzem.voltage();
+    latestCurrent = pzem.current();
+    latestPower = pzem.power();
+    latestEnergy = pzem.energy();
+    latestFrequency = pzem.frequency();
+    latestPowerFactor = pzem.pf();
+    hasValidReading = validReading(latestVoltage, latestCurrent, latestPower,
+                                   latestEnergy, latestFrequency, latestPowerFactor);
+    if (!hasValidReading) {
+      Serial.printf("ERROR PZEM: pembacaan tidak valid (V=%.2f, A=%.2f, W=%.2f, "
+                    "kWh=%.3f, Hz=%.2f, PF=%.3f); siklus 60 detik ini dilewati.\n",
+                    latestVoltage, latestCurrent, latestPower, latestEnergy,
+                    latestFrequency, latestPowerFactor);
+    } else {
+      Serial.printf("Sampel sensor (interval 60 detik): V=%.2f V, I=%.3f A, P=%.2f W, E=%.4f kWh, f=%.2f Hz, PF=%.3f\n",
+                    latestVoltage, latestCurrent, latestPower, latestEnergy,
+                    latestFrequency, latestPowerFactor);
+    }
+  }
 
-  if (!validReading(voltage, current, power, energyRaw, frequency, powerFactor)) {
-    Serial.printf("ERROR PZEM: pembacaan tidak valid (V=%.2f, A=%.2f, W=%.2f, "
-                  "kWh=%.3f, Hz=%.2f, PF=%.3f); kirim dilewati.\n",
-                  voltage, current, power, energyRaw, frequency, powerFactor);
+  if (!hasValidReading) {
     lcd.setCursor(0, 0);
     lcd.print("PZEM ERROR      ");
     lcd.setCursor(0, 1);
     lcd.print("Cek Sensor      ");
-    delay(200);
+    delay(10);
     return;
   }
 
+  const float voltage = latestVoltage;
+  const float current = latestCurrent;
+  const float power = latestPower;
+  const float energyRaw = latestEnergy;
+  const float frequency = latestFrequency;
+  const float powerFactor = latestPowerFactor;
   float energyDisplay = energyRaw - energyOffset;
   if (energyDisplay < 0) energyDisplay = 0;
   const float biaya = energyDisplay * tarif[dayaIndex];
@@ -382,13 +412,14 @@ void loop() {
   }
   displayTimestamp();
 
-  const unsigned long now = millis();
-  if (wifiConnected && now - lastTelemetrySend >= SEND_INTERVAL_MS) {
+  if (sampleDue && wifiConnected) {
     lastTelemetrySend = now;
     sendTelemetry(voltage, current, power, energyRaw, frequency, powerFactor);
+  } else if (sampleDue) {
+    Serial.println("Sampel valid, tetapi Wi-Fi offline; pengiriman dilewati.");
   }
 
-  if (wifiConnected && Blynk.connected() && now - lastBlynkSend >= SEND_INTERVAL_MS) {
+  if (sampleDue && wifiConnected && Blynk.connected()) {
     Blynk.virtualWrite(V1, voltage);
     Blynk.virtualWrite(V2, current);
     Blynk.virtualWrite(V3, power);
