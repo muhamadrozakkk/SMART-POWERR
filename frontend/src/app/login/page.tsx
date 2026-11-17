@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -25,6 +25,15 @@ export default function LoginPage() {
   const [transitionTarget, setTransitionTarget] = useState<"/dashboard/developer" | "/dashboard/user" | null>(null);
   const [transitionExiting, setTransitionExiting] = useState(false);
 
+  useEffect(() => {
+    if (!transitionTarget) return;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => { document.documentElement.style.overflow = previousHtmlOverflow; document.body.style.overflow = previousBodyOverflow; };
+  }, [transitionTarget]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
@@ -39,11 +48,11 @@ export default function LoginPage() {
       document.cookie = "spw_auth=1; path=/; max-age=28800; samesite=lax";
       document.cookie = `spw_role=${role}; path=/; max-age=28800; samesite=lax`;
       setTransitionTarget(role === "DEVELOPER" ? "/dashboard/developer" : "/dashboard/user");
-      window.setTimeout(() => setTransitionExiting(true), 4700);
+      window.setTimeout(() => setTransitionExiting(true), 1550);
       window.setTimeout(() => {
         window.dispatchEvent(new Event("spw:login-success"));
         router.push(role === "DEVELOPER" ? "/dashboard/developer" : "/dashboard/user");
-      }, 5000);
+      }, 1800);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Tidak dapat menghubungi server. Coba lagi.");
     } finally {

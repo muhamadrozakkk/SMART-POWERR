@@ -35,7 +35,7 @@ export default function DeveloperDashboard() {
     } catch (error) { setNotice(error instanceof Error ? error.message : "Data developer tidak dapat dimuat"); }
   }, []);
 
-  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); const refresh = window.setInterval(() => { if (!document.hidden) void load(); }, 10000); return () => { window.clearTimeout(timer); window.clearInterval(refresh); }; }, [load]);
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); const refresh = window.setInterval(() => { if (!document.hidden) void load(); }, 30000); return () => { window.clearTimeout(timer); window.clearInterval(refresh); }; }, [load]);
 
   async function changeRole(user: User, role: User["role"]) {
     setBusy(true); setNotice("");

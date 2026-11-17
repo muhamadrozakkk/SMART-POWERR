@@ -379,4 +379,28 @@ button:hover:not(:disabled) { transition-timing-function: cubic-bezier(.22,1,.36
 @keyframes particle-glow { to { opacity: .35; transform: scale(.6); } }
 @media (max-width: 760px) { .app-sidebar { left: 0; top: 0; bottom: 0; border-radius: 0 20px 20px 0; }.main-area { margin-left: 0; }.profile-avatar-editor { align-items: flex-start; flex-direction: column; }.splash-orbit { width: 220px; height: 220px; }.splash-orbit--two { width: 260px; height: 180px; }.splash-status { top: calc(50% + 150px); }.splash-progress { top: calc(50% + 188px); } }
 @media (max-width: 760px) { .ambient-toggle { min-height: 34px; padding: 0 7px; gap: 4px; }.ambient-toggle small { font-size: 9px; }.ambient-toggle > span { width: 21px; height: 21px; }.topbar-actions { flex-wrap: wrap; justify-content: flex-end; } }
+
+/* Keep the visual polish while limiting constant GPU work on everyday devices. */
+.aurora-orb { filter: blur(68px); opacity: .12; will-change: auto; }
+.aurora-orb--gold { opacity: .07; }
+.aurora-ribbons { opacity: .24; animation: none; }
+.app-sidebar { backdrop-filter: blur(15px) saturate(145%); }
+.metric-card, .panel-card, .stat-tile, .data-highlight, .energy-insight { backdrop-filter: blur(10px) saturate(125%); }
+.connection-card, .logout-button, .app-footer, .landing-footer { backdrop-filter: blur(10px); }
+.metrics-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.dashboard-grid { gap: 14px; }
+.metric-card { min-width: 0; }
+.post-login-splash { min-height: 100dvh; }
+.splash-aurora { filter: blur(64px); opacity: .15; }
+.splash-core { position: absolute; z-index: 2; top: 50%; left: 50%; transform: translate(-50%,-50%); animation: splash-logo-float 3.5s ease-in-out infinite; }
+.splash-particles { position: absolute; inset: 0; pointer-events: none; }
+.splash-orbit { top: 50%; left: 50%; box-shadow: none; transform: translate(-50%,-50%); }
+.splash-orbit--two { transform: translate(-50%,-50%) rotate(-32deg); }
+.splash-progress span { animation-duration: 1.8s; }
+.primary-button::after, .login-submit::after { opacity: 0; animation: none; transition: opacity .2s ease; }
+.primary-button:hover::after, .login-submit:hover::after { opacity: 1; animation: button-shimmer .9s ease-out 1; }
+@media (max-width: 1260px) { .metrics-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) { .metrics-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } }
+@media (max-width: 360px) { .metrics-row { grid-template-columns: 1fr; } }
+@keyframes splash-logo-float { 0%,100% { transform: translate(-50%,-50%); } 50% { transform: translate(-50%,calc(-50% - 5px)); } }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
