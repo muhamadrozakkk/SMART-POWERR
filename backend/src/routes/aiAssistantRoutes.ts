@@ -70,16 +70,12 @@ function localAnswer(message: string, language: Language, context: Context) {
   return "Saat ini aku sedang dalam mode lokal, jadi pengetahuan umumku terbatas. Aktifkan Gemini API key yang valid di backend agar aku bisa menjawab berbagai pertanyaan umum. Aku tetap bisa menjawab pertanyaan dasar tentang dashboard, perangkat, tarif, dan pembacaan listrik.";
 }
 
-function isAccountQuestion(message: string) {
-  return /smart.?power|perangkat|device|esp32|pzem|sensor|telemetri|telemetry|pembacaan|tegangan|voltage|arus|current|daya|power|energi|energy|kwh|tarif|tariff|biaya|cost|tagihan|history|histori|riwayat|notifikasi|notification|relay|watt|frekuensi|frequency|faktor daya|power factor/i.test(message);
-}
-
 async function generateAnswer(message: string, language: Language, context: Context, history: ChatTurn[]): Promise<{ answer: string; provider: "openai-compatible" | "local" | "local-fallback" }> {
   if (!env.aiApiKey) return { answer: localAnswer(message, language, context), provider: "local" };
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
-    const accountContext = isAccountQuestion(message) ? JSON.stringify(context) : "Tidak dikirim untuk pertanyaan umum.";
+    const accountContext = JSON.stringify(context);
     const response = await fetch(env.aiApiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.aiApiKey}` },
@@ -117,10 +113,9 @@ aiAssistantRoutes.post("/", async (request, response, next) => {
       const content = turn.content.trim().slice(0, 1000);
       return content ? [{ role: turn.role, content }] : [];
     }) : [];
-    const isSmartPowerQuestion = isAccountQuestion(body.message.trim());
-    const context: Context = isSmartPowerQuestion
-      ? await loadContext(userId(request))
-      : { device: null, latest: null, tariff: null, history24h: { count: 0, averagePowerW: 0, peakPowerW: 0, energyKwh: 0 }, unreadNotifications: 0 };
+    // Resolve context on the server so every request gets fresh, account-scoped data.
+    // Client-provided context is intentionally not trusted for device or meter values.
+    const context: Context = await loadContext(userId(request));
     const result = await generateAnswer(body.message.trim(), language, context, history);
     response.json({ ...result, context });
   } catch (error) { next(error); }

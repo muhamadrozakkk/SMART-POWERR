@@ -40,14 +40,15 @@ export function SmartPowerAssistant() {
   const speak = useCallback((text: string) => {
     if (!voiceEnabled || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const spokenText = (text.match(/[^.!?]+[.!?]?/g) ?? [text]).slice(0, 3).join(" ").trim().slice(0, 420);
+    const utterance = new SpeechSynthesisUtterance(spokenText);
     utterance.lang = locale === "EN" ? "en-US" : "id-ID";
-    utterance.pitch = 1.08;
-    utterance.rate = 0.98;
-    utterance.volume = 0.92;
+    utterance.pitch = 1.25;
+    utterance.rate = 0.96;
+    utterance.volume = 0.95;
     const voices = window.speechSynthesis.getVoices();
     const languageVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith(locale === "EN" ? "en" : "id"));
-    utterance.voice = languageVoices.find((voice) => /female|woman|perempuan|gadis|damayanti|google.*bahasa|indonesia.*female/i.test(voice.name)) ?? languageVoices[0] ?? null;
+    utterance.voice = languageVoices.find((voice) => /female|woman|perempuan|gadis|damayanti|google.*bahasa|indonesia.*female|siti|andika.*female/i.test(voice.name)) ?? languageVoices[0] ?? null;
     utterance.onstart = () => setDucked(true);
     utterance.onend = () => setDucked(false);
     utterance.onerror = () => setDucked(false);

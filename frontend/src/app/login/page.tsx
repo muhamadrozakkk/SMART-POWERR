@@ -2,16 +2,18 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Bolt, Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
 import { LanguageToggle } from "@/components/common/LanguageToggle";
 import { useI18n } from "@/lib/i18n";
+import Image from "next/image";
+import { PostLoginSplash } from "@/components/layout/PostLoginSplash";
 
 type AuthResult = { token?: string; user?: { role?: "DEVELOPER" | "USER" } };
 
 export default function LoginPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [isRegister, setIsRegister] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -20,6 +22,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [transitionTarget, setTransitionTarget] = useState<"/dashboard/developer" | "/dashboard/user" | null>(null);
+  const [transitionExiting, setTransitionExiting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,12 +35,15 @@ export default function LoginPage() {
         body: JSON.stringify(isRegister ? { name, email, password } : { email, password }),
       });
       if (result.token) window.localStorage.setItem("spw_access_token", result.token);
-      window.localStorage.setItem("spw_ambient_start_on_login", "1");
-      window.dispatchEvent(new Event("spw:login-success"));
       const role = result.user?.role ?? "USER";
       document.cookie = "spw_auth=1; path=/; max-age=28800; samesite=lax";
       document.cookie = `spw_role=${role}; path=/; max-age=28800; samesite=lax`;
-      router.push(role === "DEVELOPER" ? "/dashboard/developer" : "/dashboard/user");
+      setTransitionTarget(role === "DEVELOPER" ? "/dashboard/developer" : "/dashboard/user");
+      window.setTimeout(() => setTransitionExiting(true), 4700);
+      window.setTimeout(() => {
+        window.dispatchEvent(new Event("spw:login-success"));
+        router.push(role === "DEVELOPER" ? "/dashboard/developer" : "/dashboard/user");
+      }, 5000);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Tidak dapat menghubungi server. Coba lagi.");
     } finally {
@@ -56,7 +63,7 @@ export default function LoginPage() {
       <div className="login-glow login-glow-right" />
       <div className="login-top-actions"><Link href="/" className="login-back"><ArrowLeft size={16} />{t("Kembali ke beranda")}</Link><LanguageToggle /></div>
       <section className="login-card">
-        <div className="login-logo"><span><Bolt size={25} fill="currentColor" /></span><strong>SMART <em>POWER</em> WEB</strong></div>
+        <div className="login-logo"><Image src="/images/logo-smartpower.png" alt="Logo SMART POWER WEB" width={46} height={46} /><strong>SMART <em>POWER</em> WEB</strong></div>
         <div className="login-heading">
           <h1>{t(isRegister ? "Buat akun baru" : "Selamat datang kembali")}</h1>
           <p>{t(isRegister ? "Daftar untuk mulai memantau penggunaan energi rumah Anda." : "Masuk untuk melihat penggunaan energi rumah Anda.")}</p>
@@ -74,7 +81,8 @@ export default function LoginPage() {
         <p className="login-switch">{t(isRegister ? "Sudah punya akun?" : "Belum punya akun?")} <button type="button" onClick={switchMode}>{t(isRegister ? "Masuk" : "Daftar sekarang")}</button></p>
         {!isRegister && <p className="login-info">{t("SMART POWER siap digunakan. Masuk untuk melihat data perangkat dan riwayat pemakaian yang terhubung ke akun Anda.")}</p>}
       </section>
-      <p className="login-footer">© 2026 SMART POWER WEB</p>
+      <p className="login-footer">Powered by <strong>TEXA FT UNTIDAR</strong></p>
+      {transitionTarget && <PostLoginSplash locale={locale} exiting={transitionExiting} />}
     </main>
   );
 }

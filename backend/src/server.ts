@@ -23,12 +23,14 @@ import { hardwareRoutes } from "./routes/hardwareRoutes.js";
 import { userRoutes } from "./routes/userRoutes.js";
 import { telemetryRoutes } from "./routes/telemetryRoutes.js";
 import { aiAssistantRoutes } from "./routes/aiAssistantRoutes.js";
+import { avatarRoutes } from "./routes/avatarRoutes.js";
 
 export const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.use(helmet());
 app.use(cors({ origin: (origin, callback) => { if (!origin || env.corsOrigins.includes(origin)) return callback(null, true); return callback(new Error("Origin tidak diizinkan oleh CORS")); }, credentials: true }));
+app.use("/api/user/avatar", express.json({ limit: "3mb" }), avatarRoutes);
 app.use(express.json({ limit: "32kb" }));
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false, message: { error: "Terlalu banyak percobaan login. Coba lagi nanti." } });

@@ -3,6 +3,7 @@
 import { Activity, BatteryCharging, Bolt, Gauge, Waves } from "lucide-react";
 import type { EnergyReading } from "@/types/energy";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 
 const iconMap = { bolt: Bolt, current: Activity, voltage: Gauge, wave: Waves, energy: BatteryCharging };
@@ -18,8 +19,28 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 }
 
 export function MetricCard({ metric }: { metric: EnergyReading }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const numberLocale = locale === "EN" ? "en-US" : "id-ID";
+  const parseValue = (value: string) => Number(locale === "ID" ? value.replace(/\./g, "").replace(",", ".") : value.replace(/,/g, "")) || 0;
+  const targetValue = parseValue(metric.value);
+  const animated = useRef(targetValue);
+  const [displayValue, setDisplayValue] = useState(metric.value);
+  useEffect(() => {
+    const from = animated.current;
+    const started = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - started) / 520);
+      const eased = 1 - (1 - progress) ** 3;
+      const value = from + (targetValue - from) * eased;
+      setDisplayValue(value.toLocaleString(numberLocale, { maximumFractionDigits: 3 }));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+      else animated.current = targetValue;
+    };
+    if (from !== targetValue) frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [numberLocale, targetValue]);
   const Icon = iconMap[metric.icon as keyof typeof iconMap] ?? Bolt;
   const accent = accentMap[metric.accent];
-  return <article className="metric-card"><div className={`metric-icon ${accent.icon}`}><Icon size={25} /></div><div className="metric-content"><span className="metric-label">{t(metric.label)}</span><div className="metric-value">{metric.value} <small>{metric.unit}</small></div><StatusBadge tone={metric.statusTone}>{t(metric.status)}</StatusBadge></div><Sparkline values={metric.trend} color={accent.line} /></article>;
+  return <article className="metric-card"><div className={`metric-icon ${accent.icon}`}><Icon size={25} /></div><div className="metric-content"><span className="metric-label">{t(metric.label)}</span><div className="metric-value">{displayValue} <small>{metric.unit}</small></div><StatusBadge tone={metric.statusTone}>{t(metric.status)}</StatusBadge></div><Sparkline values={metric.trend} color={accent.line} /></article>;
 }

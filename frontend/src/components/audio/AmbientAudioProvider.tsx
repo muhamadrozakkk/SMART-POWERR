@@ -1,16 +1,18 @@
 ﻿"use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
-type AudioValue = { setDucked: (ducked: boolean) => void };
+type AudioValue = { setDucked: (ducked: boolean) => void; ambientEnabled: boolean; setAmbientEnabled: (enabled: boolean) => void };
 const AudioContextState = createContext<AudioValue | null>(null);
 
 export function AmbientAudioProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<AudioContext | null>(null);
   const gainRef = useRef<GainNode | null>(null);
   const duckedRef = useRef(false);
+  const enabledRef = useRef(true);
+  const [ambientEnabled, setAmbientEnabledState] = useState(true);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (fadeIn = true) => {
     const AudioCtor = window.AudioContext;
     if (!AudioCtor) throw new Error("Web Audio API tidak tersedia");
     let context = audioRef.current;
@@ -74,38 +76,44 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
     }
     await context.resume();
     const gain = gainRef.current;
-    if (gain) gain.gain.setTargetAtTime(duckedRef.current ? 0.035 : 0.11, context.currentTime, 0.7);
+    if (gain) {
+      if (fadeIn) gain.gain.setTargetAtTime(enabledRef.current ? (duckedRef.current ? 0.015 : 0.05) : 0, context.currentTime, 1.5);
+      else gain.gain.setValueAtTime(0, context.currentTime);
+    }
   }, []);
 
   const setDucked = useCallback((ducked: boolean) => {
     duckedRef.current = ducked;
-    if (audioRef.current && gainRef.current) gainRef.current.gain.setTargetAtTime(ducked ? 0.035 : 0.11, audioRef.current.currentTime, 0.2);
+    if (audioRef.current && gainRef.current) gainRef.current.gain.setTargetAtTime(enabledRef.current ? (ducked ? 0.015 : 0.05) : 0, audioRef.current.currentTime, 0.2);
   }, []);
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem("spw_ambient_enabled") === "1";
-    const startAfterLogin = window.localStorage.getItem("spw_ambient_start_on_login") === "1";
-    if (startAfterLogin) window.localStorage.removeItem("spw_ambient_start_on_login");
-    const startAfterLoginEvent = () => {
-      window.localStorage.removeItem("spw_ambient_start_on_login");
-      window.localStorage.setItem("spw_ambient_enabled", "1");
-      void start().catch(() => undefined);
-    };
-    const startAfterBrowserGesture = () => {
-      window.localStorage.setItem("spw_ambient_enabled", "1");
-      void start().catch(() => undefined);
-      window.removeEventListener("pointerdown", startAfterBrowserGesture);
-      window.removeEventListener("keydown", startAfterBrowserGesture);
-    };
-    window.addEventListener("spw:login-success", startAfterLoginEvent);
-    window.addEventListener("pointerdown", startAfterBrowserGesture);
-    window.addEventListener("keydown", startAfterBrowserGesture);
-    window.localStorage.setItem("spw_ambient_enabled", "1");
-    if (stored || startAfterLogin) void start().catch(() => undefined);
-    return () => { window.removeEventListener("spw:login-success", startAfterLoginEvent); window.removeEventListener("pointerdown", startAfterBrowserGesture); window.removeEventListener("keydown", startAfterBrowserGesture); if (audioRef.current) void audioRef.current.close(); audioRef.current = null; gainRef.current = null; };
+  const setAmbientEnabled = useCallback((enabled: boolean) => {
+    enabledRef.current = enabled;
+    setAmbientEnabledState(enabled);
+    window.localStorage.setItem("spw_ambient_enabled", enabled ? "1" : "0");
+    if (!enabled) {
+      if (audioRef.current && gainRef.current) gainRef.current.gain.setTargetAtTime(0, audioRef.current.currentTime, 0.25);
+      return;
+    }
+    void start(true).catch(() => undefined);
   }, [start]);
 
-  return <AudioContextState.Provider value={{ setDucked }}>{children}</AudioContextState.Provider>;
+  useEffect(() => {
+    let syncSavedPreference: number | undefined;
+    const primeFromGesture = () => { void start(false).catch(() => undefined); window.removeEventListener("pointerdown", primeFromGesture); window.removeEventListener("keydown", primeFromGesture); };
+    const saved = window.localStorage.getItem("spw_ambient_enabled");
+    if (saved === "0") {
+      enabledRef.current = false;
+      syncSavedPreference = window.setTimeout(() => setAmbientEnabledState(false), 0);
+    }
+    const startAfterLogin = () => { if (enabledRef.current) void start(true).catch(() => undefined); };
+    window.addEventListener("spw:login-success", startAfterLogin);
+    window.addEventListener("pointerdown", primeFromGesture);
+    window.addEventListener("keydown", primeFromGesture);
+    return () => { if (syncSavedPreference !== undefined) window.clearTimeout(syncSavedPreference); window.removeEventListener("spw:login-success", startAfterLogin); window.removeEventListener("pointerdown", primeFromGesture); window.removeEventListener("keydown", primeFromGesture); if (audioRef.current) void audioRef.current.close(); audioRef.current = null; gainRef.current = null; };
+  }, [start]);
+
+  return <AudioContextState.Provider value={{ setDucked, ambientEnabled, setAmbientEnabled }}>{children}</AudioContextState.Provider>;
 }
 
 export function useAmbientAudio() {
