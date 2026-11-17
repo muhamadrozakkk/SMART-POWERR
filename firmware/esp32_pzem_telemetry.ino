@@ -30,7 +30,7 @@ const char *DEVICE_ID = "SPW-44E849D400E2A923";
 #define BTN_UP   33
 constexpr int PZEM_RX_PIN = 16;
 constexpr int PZEM_TX_PIN = 17;
-constexpr unsigned long SEND_INTERVAL_MS = 5000;
+constexpr unsigned long SEND_INTERVAL_MS = 60UL * 1000UL;
 
 HardwareSerial pzemSerial(2);
 PZEM004Tv30 pzem(pzemSerial, PZEM_RX_PIN, PZEM_TX_PIN);

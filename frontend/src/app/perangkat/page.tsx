@@ -21,7 +21,7 @@ export default function DevicesPage() {
     const initial = window.setTimeout(() => void load(), 0);
     const onAdded = () => void load();
     window.addEventListener("spw:device-added", onAdded);
-    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 10000);
+    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 60000);
     return () => { window.clearTimeout(initial); window.removeEventListener("spw:device-added", onAdded); window.clearInterval(timer); };
   }, [load]);
 

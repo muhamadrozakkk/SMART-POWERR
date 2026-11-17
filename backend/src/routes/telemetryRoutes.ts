@@ -24,8 +24,8 @@ telemetryRoutes.get("/history", requireAuth, async (request, response, next) => 
     catch (error) { if (error instanceof HttpError && error.status === 404) return response.json({ data: [] }); throw error; }
     const defaultFrom = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const interval = request.query.interval;
-    if (interval !== undefined && !["hour", "day", "week", "month"].includes(String(interval))) throw new HttpError(400, "interval harus hour, day, week, atau month");
-    const data = await readings(deviceId, typeof request.query.from === "string" ? request.query.from : defaultFrom, typeof request.query.to === "string" ? request.query.to : undefined, (interval as "hour" | "day" | "week" | "month" | undefined) ?? "hour");
+    if (interval !== undefined && !["hour", "day", "week", "month", "raw"].includes(String(interval))) throw new HttpError(400, "interval harus hour, day, week, month, atau raw");
+    const data = await readings(deviceId, typeof request.query.from === "string" ? request.query.from : defaultFrom, typeof request.query.to === "string" ? request.query.to : undefined, (interval as "hour" | "day" | "week" | "month" | "raw" | undefined) ?? "hour");
     response.json({ data });
   } catch (error) { next(error); }
 });
@@ -33,10 +33,10 @@ telemetryRoutes.get("/:deviceId", requireAuth, async (request, response, next) =
   try {
     const deviceId = await resolveDeviceForUser(userId(request), String(request.params.deviceId));
     const interval = request.query.interval;
-    if (interval !== undefined && !["hour", "day", "week", "month"].includes(String(interval))) throw new HttpError(400, "interval harus hour, day, week, atau month");
+    if (interval !== undefined && !["hour", "day", "week", "month", "raw"].includes(String(interval))) throw new HttpError(400, "interval harus hour, day, week, month, atau raw");
     const [latest, history] = await Promise.all([
       latestReading(deviceId).catch((error) => { if (error instanceof HttpError && error.status === 404) return null; throw error; }),
-      readings(deviceId, typeof request.query.from === "string" ? request.query.from : undefined, typeof request.query.to === "string" ? request.query.to : undefined, interval as "hour" | "day" | "week" | "month" | undefined),
+      readings(deviceId, typeof request.query.from === "string" ? request.query.from : undefined, typeof request.query.to === "string" ? request.query.to : undefined, interval as "hour" | "day" | "week" | "month" | "raw" | undefined),
     ]);
     response.json({ device_id: deviceId, latest, data: history });
   } catch (error) { next(error); }

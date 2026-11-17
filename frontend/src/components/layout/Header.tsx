@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Bell, ChevronDown, Menu } from "lucide-react";
+import { Bell, ChevronDown, Menu, Volume2, VolumeX } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { OnlineBadge } from "@/components/ui/StatusBadge";
@@ -9,6 +9,7 @@ import { LanguageToggle } from "@/components/common/LanguageToggle";
 import { apiRequest, notificationLabel, type ApiNotification } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { formatWibDateTime } from "@/lib/datetime";
+import { useAmbientAudio } from "@/components/audio/AmbientAudioProvider";
 
 type HeaderDevice = { device_id: string; is_online: boolean };
 type HeaderUser = { name: string; role: "DEVELOPER" | "USER"; avatarUrl?: string | null };
@@ -16,6 +17,7 @@ type HeaderUser = { name: string; role: "DEVELOPER" | "USER"; avatarUrl?: string
 export function Header({ onMenu }: { onMenu: () => void }) {
   const router = useRouter();
   const { locale, t } = useI18n();
+  const { enabled: musicEnabled, setEnabled: setMusicEnabled } = useAmbientAudio();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [user, setUser] = useState<HeaderUser | null>(null);
@@ -44,7 +46,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
     window.addEventListener("spw:profile-updated", updateProfile);
     window.addEventListener("spw:notifications-updated", safeRefresh);
     const initialRefresh = window.setTimeout(() => { if (active) { void refresh(); loadAvatar(); } }, 0);
-    const timer = window.setInterval(() => { if (!document.hidden) void refresh(); }, 30000);
+    const timer = window.setInterval(() => { if (!document.hidden) void refresh(); }, 60000);
     return () => { active = false; window.clearTimeout(initialRefresh); window.clearInterval(timer); window.removeEventListener("spw:profile-updated", updateProfile); window.removeEventListener("spw:notifications-updated", safeRefresh); };
   }, [refresh]);
 
@@ -64,6 +66,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
     <div className="greeting"><h1>{locale === "EN" ? "Hello" : "Halo"}{user?.name ? `, ${user.name}` : ""}! <span>👋</span></h1><p>{t("Ringkasan pemantauan energi listrik Anda")}</p></div>
     <div className="topbar-actions">
       <OnlineBadge online={devices.length > 0 && isOnline}>{devices.length > 0 ? (isOnline ? t("Perangkat online") : t("Perangkat offline")) : t("Belum ada perangkat")}</OnlineBadge>
+      <button className="ambient-toggle" type="button" onClick={() => setMusicEnabled(!musicEnabled)} aria-label={musicEnabled ? (locale === "EN" ? "Mute background music" : "Matikan musik latar") : (locale === "EN" ? "Play background music" : "Nyalakan musik latar")} title={musicEnabled ? (locale === "EN" ? "Mute background music" : "Matikan musik latar") : (locale === "EN" ? "Play background music" : "Nyalakan musik latar")} aria-pressed={musicEnabled}>{musicEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
       <LanguageToggle compact />
       <div className="header-menu-wrap">
         <button className="icon-button notification-button" aria-label={`${t("Notifikasi")}, ${unreadCount} ${t("Belum dibaca")}`} aria-expanded={notificationsOpen} onClick={() => { setNotificationsOpen(!notificationsOpen); setProfileOpen(false); }}><Bell size={21} />{unreadCount > 0 && <span>{unreadCount > 99 ? "99+" : unreadCount}</span>}</button>

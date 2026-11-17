@@ -46,7 +46,7 @@ export function UserControls() {
     let active = true;
     const refreshReading = () => { if (!document.hidden) void apiRequest<Reading>("/api/telemetry/latest").then((value) => { if (active) setLatest(value); }).catch(() => { if (active) setLatest(null); }); };
     const initial = window.setTimeout(refreshReading, 0);
-    const timer = window.setInterval(refreshReading, 5000);
+    const timer = window.setInterval(refreshReading, 60000);
     return () => { active = false; window.clearTimeout(initial); window.clearInterval(timer); };
   }, []);
 

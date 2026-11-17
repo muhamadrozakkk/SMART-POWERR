@@ -19,7 +19,7 @@ export const env = {
   timezone: process.env.TZ ?? "Asia/Jakarta",
   developerEmail: process.env.DEVELOPER_EMAIL?.trim() ?? "",
   developerPassword: process.env.DEVELOPER_PASSWORD ?? "",
-  onlineThresholdSeconds: Number(process.env.ONLINE_THRESHOLD_SECONDS ?? 60),
+  onlineThresholdSeconds: Number(process.env.ONLINE_THRESHOLD_SECONDS ?? 120),
   notificationCooldownSeconds: Number(process.env.NOTIFICATION_COOLDOWN_SECONDS ?? 600),
   frontendUrl: process.env.FRONTEND_URL ?? "https://www.smartpower.web.id",
   smtpHost: process.env.SMTP_HOST ?? "",

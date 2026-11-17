@@ -42,12 +42,12 @@ export async function latestReading(deviceId: string) {
   return map(result.rows[0]);
 }
 
-export async function readings(deviceId: string, from?: string, to?: string, interval?: "hour" | "day" | "week" | "month") {
+export async function readings(deviceId: string, from?: string, to?: string, interval?: "hour" | "day" | "week" | "month" | "raw") {
   const values: unknown[] = [deviceId];
   const conditions = ["device_id=$1"];
   if (from) { if (Number.isNaN(Date.parse(from))) throw new HttpError(400, "Parameter from tidak valid"); values.push(new Date(from)); conditions.push(`ts >= $${values.length}`); }
   if (to) { if (Number.isNaN(Date.parse(to))) throw new HttpError(400, "Parameter to tidak valid"); values.push(new Date(to)); conditions.push(`ts <= $${values.length}`); }
-  if (interval) {
+  if (interval && interval !== "raw") {
     const bucket = interval === "hour" ? "hour" : interval === "day" ? "day" : interval === "week" ? "week" : "month";
     const toParam = to ? `$${values.length}` : null;
     const rangeConditions = [from ? "ts >= $2" : null, toParam ? `ts <= ${toParam}` : null].filter(Boolean).join(" AND ");
@@ -58,6 +58,12 @@ export async function readings(deviceId: string, from?: string, to?: string, int
       values,
     );
     return result.rows.map((row) => ({ device_id: deviceId, timestamp: new Date(row.timestamp).toISOString(), voltage: Number(row.voltage), current: Number(row.current), power: Number(row.power), energy: Number(row.energy), frequency: Number(row.frequency), power_factor: Number(row.power_factor) }));
+  }
+  if (interval === "raw") {
+    values.push(50000);
+    const rawConditions = conditions.map((condition) => condition.replaceAll("device_id", "r.device_id").replaceAll("ts", "r.ts"));
+    const result = await query(`SELECT * FROM (SELECT r.device_id, r.ts, r.voltage, r.current, r.power, r.energy, r.frequency, r.power_factor, s.tariff_class, s.tariff_per_kwh FROM readings r LEFT JOIN settings s ON s.device_id=r.device_id WHERE ${rawConditions.join(" AND ")} ORDER BY r.ts DESC LIMIT $${values.length}) recent ORDER BY ts ASC`, values);
+    return result.rows.map((row) => ({ ...map(row), tariff_class: String(row.tariff_class ?? "R1_1300VA"), tariff_per_kwh: Number(row.tariff_per_kwh ?? 1444.7) }));
   }
   values.push(5000);
   const result = await query(`SELECT * FROM (SELECT device_id, ts, voltage, current, power, energy, frequency, power_factor FROM readings WHERE ${conditions.join(" AND ")} ORDER BY ts DESC LIMIT $${values.length}) recent ORDER BY ts ASC`, values);

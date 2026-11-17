@@ -4,6 +4,7 @@ import { query, transaction } from "../db/pool.js";
 import { requireAuth, requireRole, userId } from "../middleware/auth.js";
 import { deviceStatus, resolveDeviceForUser } from "../services/deviceService.js";
 import { HttpError } from "../utils/errors.js";
+import { env } from "../config/env.js";
 
 export const deviceRoutes = Router();
 deviceRoutes.use(requireAuth);
@@ -15,7 +16,7 @@ deviceRoutes.get("/", async (request, response, next) => {
     const result = isDeveloper
       ? await query("SELECT d.device_id,d.name,d.location,d.last_seen,s.user_id,u.name AS owner_name,u.email AS owner_email FROM devices d LEFT JOIN settings s ON s.device_id=d.device_id LEFT JOIN users u ON u.id=s.user_id ORDER BY d.created_at DESC")
       : await query("SELECT d.device_id,d.name,d.location,d.last_seen,s.user_id FROM devices d JOIN settings s ON s.device_id=d.device_id WHERE s.user_id=$1 ORDER BY d.created_at DESC", [userId(request)]);
-    response.json({ data: result.rows.map((device) => ({ ...device, is_online: Boolean(device.last_seen && Date.now() - new Date(device.last_seen as string).getTime() <= 60_000) })) });
+    response.json({ data: result.rows.map((device) => ({ ...device, is_online: Boolean(device.last_seen && Date.now() - new Date(device.last_seen as string).getTime() <= env.onlineThresholdSeconds * 1000) })) });
   } catch (error) { next(error); }
 });
 

@@ -127,7 +127,7 @@ async function readAttachment(file: File): Promise<PendingAttachment> {
 
 export function SmartPowerAssistant() {
   const { locale, t } = useI18n();
-  const { setDucked, enabled: musicEnabled, setEnabled: setMusicEnabled } = useAmbientAudio();
+  const { setDucked } = useAmbientAudio();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
@@ -295,7 +295,7 @@ export function SmartPowerAssistant() {
   return <aside className="smart-assistant" aria-label={t("Asisten SMART POWER WEB")}>
     {open && <section className="assistant-panel smart-assistant-panel" role="dialog" aria-modal="false" aria-labelledby="smart-assistant-title">
     <header className="assistant-header"><span className="assistant-avatar"><Image src="/images/logo-smartpower.png" alt="Logo SMART POWER WEB" width={43} height={43} /></span><div><strong id="smart-assistant-title">PowerMate</strong><span><Sparkles size={12} />{t("Asisten energi personal")}</span></div><button className="voice-toggle" type="button" onClick={toggleVoice} aria-pressed={voiceEnabled} title={voiceEnabled ? t("Matikan suara AI") : t("Nyalakan suara AI")}>{voiceEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}<small>{voiceEnabled ? t("Suara AI: Aktif") : t("Suara AI: Bisu")}</small></button><button type="button" onClick={close} aria-label={t("Tutup asisten")}><X size={19} /></button></header>
-      <div className="assistant-chat-tools"><button type="button" onClick={newConversation}><MessageSquarePlus size={15} />{startNewLabel}</button><button type="button" onClick={() => setHistoryOpen((value) => !value)} aria-expanded={historyOpen}><History size={15} />{historyLabel}</button><button className="assistant-music-toggle" type="button" onClick={() => setMusicEnabled(!musicEnabled)} aria-label={musicEnabled ? (locale === "EN" ? "Mute background music" : "Matikan musik latar") : (locale === "EN" ? "Play background music" : "Nyalakan musik latar")} title={musicEnabled ? (locale === "EN" ? "Mute background music" : "Matikan musik latar") : (locale === "EN" ? "Play background music" : "Nyalakan musik latar")}>{musicEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}</button></div>
+      <div className="assistant-chat-tools"><button type="button" onClick={newConversation}><MessageSquarePlus size={15} />{startNewLabel}</button><button type="button" onClick={() => setHistoryOpen((value) => !value)} aria-expanded={historyOpen}><History size={15} />{historyLabel}</button></div>
       {historyOpen && <div className="assistant-history" aria-label={historyLabel}>{conversations.filter((item) => item.messages.length).map((item) => <button type="button" className={item.id === activeConversationId ? "active" : ""} key={item.id} onClick={() => { setActiveConversationId(item.id); setAttachments([]); setHistoryOpen(false); }}>{item.title}</button>)}{!conversations.some((item) => item.messages.length) && <span>{locale === "EN" ? "No conversations yet." : "Belum ada percakapan."}</span>}</div>}
       <div className="assistant-messages" aria-live="polite">
         {!messages.length && <div className="assistant-message assistant"><span>{assistantGreeting}</span></div>}
