@@ -126,6 +126,6 @@ export function SmartPowerAssistant() {
       <form className="assistant-composer" onSubmit={(event) => { event.preventDefault(); void sendMessage(draft); }}><button className={`assistant-mic ${listening ? "recording" : ""}`} type="button" onClick={toggleMic} aria-label={listening ? t("Hentikan mikrofon") : t("Mulai bicara")}>{listening ? <MicOff size={17} /> : <Mic size={17} />}</button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={locale === "EN" ? "Ask me anything…" : "Tanyakan apa saja…"} aria-label={t("Tulis pertanyaan untuk PowerMate")} /><button type="submit" aria-label={t("Kirim pertanyaan")} disabled={!draft.trim() || loading}><Send size={18} /></button></form>
       <div className={`assistant-voice-indicator ${voiceEnabled ? "active" : ""}`} aria-hidden="true"><AudioLines size={12} /><span>{voiceEnabled ? t("Suara AI aktif") : t("Jawaban teks")}</span></div>
     </section>}
-    <button className="assistant-launcher" type="button" onClick={() => setOpen((current) => !current)} aria-label={open ? t("Tutup PowerMate") : t("Buka PowerMate")}><Sparkles size={23} /></button>
+    <button className="assistant-launcher" type="button" onClick={() => setOpen((current) => !current)} aria-label={open ? t("Tutup PowerMate") : t("Buka PowerMate")}><Image src="/images/logo-smartpower.png" alt="" width={44} height={44} /></button>
   </aside>;
 }

@@ -6,7 +6,6 @@ import { FeatureCard } from "@/components/landing/FeatureCard";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { LandingPreview } from "@/components/landing/LandingPreview";
-import { LandingAssistant } from "@/components/landing/LandingAssistant";
 import { useI18n } from "@/lib/i18n";
 
 const featureCards = [
@@ -35,5 +34,5 @@ export default function LandingPage() {
     <section className="how-it-works" id="cara-kerja"><span className="section-kicker">{t("CARA KERJA SISTEM")}</span><h2>{t("Dari sensor ke dashboard")}</h2><p className="how-intro">{t("LCD tetap menampilkan pembacaan lokal. Koneksi internet diperlukan untuk mengirim dan melihat data melalui web.")}</p><ol>{steps.map((step, index) => <li key={step}><span>{String(index + 1).padStart(2, "0")}</span><p>{t(step)}</p></li>)}</ol></section>
     <section className="project-summary" id="tentang"><div><span className="section-kicker">{t("TENTANG PROYEK")}</span><h2>{t("Monitoring rumah tangga dari satu titik ukur")}</h2><p>{t("Proyek ini mengembangkan prototipe ESP32, PZEM-004T, dan LCD menjadi platform website dengan histori, analisis pola konsumsi, estimasi biaya tarif, dan notifikasi.")}</p><p>{t("Karena sensor berada pada jalur masuk, dashboard menyajikan konsumsi total rumah. Sistem tidak mengidentifikasi pemakaian tiap alat.")}</p></div><Link href="/tentang" className="inline-link">{t("Tentang tim dan proyek")} <ArrowRight size={14} /></Link></section>
     <section className="landing-contact" id="kontak"><div><span className="section-kicker">{t("KONTAK")}</span><h2>{t("Ada pertanyaan tentang sistem?")}</h2><p>{t("Kirim masukan atau pertanyaan melalui halaman kontak proyek.")}</p></div><Link href="/kontak" className="hero-primary">{t("Hubungi tim")} <ArrowRight size={16} /></Link></section>
-  </main><LandingAssistant /><LandingFooter /></div>;
+  </main><LandingFooter /></div>;
 }
