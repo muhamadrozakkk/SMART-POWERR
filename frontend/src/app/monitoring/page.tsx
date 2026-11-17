@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Radio, TimerReset } from "lucide-react";
 import { apiRequest, ApiRequestError, type ApiDeviceStatus, type Reading, toDeviceStatus } from "@/lib/api";
 import { PageHeader } from "@/components/common/PageHeader";
@@ -18,6 +18,7 @@ export default function MonitoringPage() {
   const [devices, setDevices] = useState<Array<{ device_id: string; name: string }>>([]);
   const [selectedDevice, setSelectedDevice] = useState("");
   const [error, setError] = useState("");
+  const lastReadingTimestamp = useRef("");
   const load = useCallback(async () => {
     try {
       const available = await apiRequest<{ data: Array<{ device_id: string; name: string }> }>("/api/devices");
@@ -34,10 +35,28 @@ export default function MonitoringPage() {
       let current: Reading | null = null;
       try { current = await apiRequest<Reading>(`/api/telemetry/latest?${query}`); }
       catch (reason) { if (!(reason instanceof ApiRequestError && reason.status === 404 && reason.message.toLowerCase().includes("belum ada pembacaan"))) throw reason; }
-      setLatest(current); setHistory(rows.data); setDevice(status.data); setError("");
+      setLatest(current); lastReadingTimestamp.current = current?.timestamp ?? ""; setHistory(rows.data); setDevice(status.data); setError("");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Data monitoring gagal dimuat"); }
   }, [selectedDevice]);
   useEffect(() => { const initial = window.setTimeout(() => void load(), 0); const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 60000); return () => { window.clearTimeout(initial); window.clearInterval(timer); }; }, [load]);
+  const refreshLatest = useCallback(async () => {
+    const deviceId = selectedDevice || devices[0]?.device_id;
+    if (!deviceId) return;
+    try {
+      const reading = await apiRequest<Reading>(`/api/telemetry/latest?device_id=${encodeURIComponent(deviceId)}`);
+      if (reading.timestamp !== lastReadingTimestamp.current) {
+        lastReadingTimestamp.current = reading.timestamp;
+        setLatest(reading);
+        void load();
+      }
+    } catch { /* Keep the last successful sample visible during brief network errors. */ }
+  }, [devices, load, selectedDevice]);
+  useEffect(() => {
+    const timer = window.setInterval(() => { if (!document.hidden) void refreshLatest(); }, 5000);
+    const onVisibility = () => { if (!document.hidden) void refreshLatest(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisibility); };
+  }, [refreshLatest]);
   if (!latest) return <><PageHeader title="Pemantauan Langsung" description="Pantau parameter listrik dan estimasi biaya dari perangkat PZEM-004T." action={<OnlineBadge>Offline</OnlineBadge>} />{error && <p className="settings-status">{error}</p>}<div className="empty-state"><strong>Menunggu data nyata dari ESP32</strong><span>Nilai sensor dan grafik akan tampil setelah pembacaan pertama tersimpan di backend.</span><button className="secondary-button" onClick={() => void load()}>Periksa lagi</button></div></>;
 
   const current = latest;
@@ -61,6 +80,6 @@ export default function MonitoringPage() {
       <PowerChart data={history.map((row) => ({ time: formatWibTime(row.timestamp).slice(0, 5), power: row.power, energy: row.energy, cost: row.cost_rp ?? 0, current: row.current, voltage: row.voltage }))} />
       <SectionCard title="Status pembacaan"><div className="data-highlight"><div><span>Pembaruan terakhir</span><strong>{device ? toDeviceStatus(device).lastUpdate : "Memuat..."}</strong><span>{device?.is_online ? "Perangkat terhubung" : "Data yang tampil adalah data terakhir"}</span></div><Radio size={33} color={device?.is_online ? "#32d86b" : "#ffb619"} /></div><div className="info-list"><div className="info-row"><span>Frekuensi</span><strong>{current.frequency} Hz</strong></div><div className="info-row"><span>Faktor daya</span><strong>{current.power_factor}</strong></div><div className="info-row"><span>Status perangkat</span><OnlineBadge>{device?.is_online ? "Online" : "Offline"}</OnlineBadge></div><div className="info-row"><span>Sumber data</span><strong>Backend API</strong></div></div></SectionCard>
     </div>
-    <SectionCard title="Keterangan"><div className="empty-state"><TimerReset size={24} /><strong>Polling aktif setiap 1 menit</strong><span>Data sensor diperbarui setiap 1 menit; polling berhenti sementara ketika tab browser tidak aktif.</span></div></SectionCard>
+    <SectionCard title="Keterangan"><div className="empty-state"><TimerReset size={24} /><strong>ESP32 mengirim sampel setiap 1 menit</strong><span>Halaman web mengecek sampel baru otomatis tiap 5 detik dan memperbarui grafik setelah data baru diterima. LCD tetap diperbarui langsung dari sensor.</span></div></SectionCard>
   </>;
 }

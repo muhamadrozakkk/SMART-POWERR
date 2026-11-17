@@ -30,11 +30,12 @@ const char *DEVICE_ID = "SPW-18BE5BF4E177ACEC";
 #define BTN_UP   33
 constexpr int PZEM_RX_PIN = 16;
 constexpr int PZEM_TX_PIN = 17;
+constexpr unsigned long SENSOR_READ_INTERVAL_MS = 1000UL;
 constexpr unsigned long SEND_INTERVAL_MS = 60UL * 1000UL;
 
 HardwareSerial pzemSerial(2);
 PZEM004Tv30 pzem(pzemSerial, PZEM_RX_PIN, PZEM_TX_PIN);
-LiquidCrystal_I2C lcd(0x27, 20, 4);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 RTC_DS3231 rtc;
 Preferences prefs;
 WiFiClientSecure secureClient;
@@ -124,17 +125,6 @@ void printRtcTime() {
                 now.day(), now.month(), now.year(), now.hour(), now.minute(), now.second());
 }
 
-void displayTimestamp() {
-  lcd.setCursor(0, 3);
-  if (!rtcReady) { lcd.print("RTC tidak tersedia  "); return; }
-  const DateTime now = rtc.now();
-  char line[21];
-  snprintf(line, sizeof(line), "%02d/%02d %02d:%02d:%02d WIB",
-           now.day(), now.month(), now.hour(), now.minute(), now.second());
-  lcd.print(line);
-  for (int i = strlen(line); i < 20; i++) lcd.print(' ');
-}
-
 void simpanData();
 void sendTelemetry(float voltage, float current, float power, float energy,
                    float frequency, float powerFactor);
@@ -147,11 +137,7 @@ BLYNK_WRITE(V10) {
       energyOffset = meterEnergy;
       simpanData();
     }
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("RESET DARI HP");
-    delay(1500);
-    lcd.clear();
+    lcdNeedsRefresh = true;
   }
 }
 
@@ -161,20 +147,20 @@ BLYNK_WRITE(V11) {
   if (pilihan >= 0 && pilihan < jumlahDaya) {
     dayaIndex = pilihan;
     simpanData();
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("Ganti Daya HP");
-    lcd.setCursor(0, 1);
-    lcd.print(dayaVA[dayaIndex]);
-    lcd.print(" VA");
-    delay(1500);
-    lcd.clear();
+    lcdNeedsRefresh = true;
   }
 }
 
 void simpanData() {
   prefs.putInt("daya", dayaIndex);
   prefs.putFloat("offset", energyOffset);
+}
+
+void writeLcdLine(uint8_t row, const char *text) {
+  lcd.setCursor(0, row);
+  uint8_t column = 0;
+  while (text[column] && column < 16) { lcd.print(text[column]); column++; }
+  while (column++ < 16) lcd.print(' ');
 }
 
 bool connectWiFiAtStartup() {
@@ -242,7 +228,8 @@ void sendTelemetry(float voltage, float current, float power, float energy,
   serializeJson(doc, payload);
 
   HTTPClient http;
-  http.setTimeout(10000);
+  // Batasi jeda loop LCD jika jaringan/backend sedang lambat.
+  http.setTimeout(3000);
   if (!http.begin(secureClient, API_URL)) {
     Serial.println("ERROR: Gagal memulai HTTPS ke backend.");
     return;
@@ -336,7 +323,7 @@ void setup() {
   secureClient.setInsecure();
   delay(1500);
   lcd.clear();
-  lastSensorRead = millis() - SEND_INTERVAL_MS;
+  lastSensorRead = millis() - SENSOR_READ_INTERVAL_MS;
   lastBlynkSend = millis() - SEND_INTERVAL_MS;
   lastTelemetrySend = millis() - SEND_INTERVAL_MS;
 }
@@ -355,7 +342,7 @@ void loop() {
   }
 
   const unsigned long now = millis();
-  const bool sampleDue = now - lastSensorRead >= SEND_INTERVAL_MS;
+  const bool sampleDue = now - lastSensorRead >= SENSOR_READ_INTERVAL_MS;
   if (sampleDue) {
     lastSensorRead = now;
     latestVoltage = pzem.voltage();
@@ -368,12 +355,12 @@ void loop() {
                                    latestEnergy, latestFrequency, latestPowerFactor);
     if (!hasValidReading) {
       Serial.printf("ERROR PZEM: pembacaan tidak valid (V=%.2f, A=%.2f, W=%.2f, "
-                    "kWh=%.3f, Hz=%.2f, PF=%.3f); siklus 60 detik ini dilewati.\n",
+                    "kWh=%.3f, Hz=%.2f, PF=%.3f); pembacaan berikutnya dicoba 1 detik lagi.\n",
                     latestVoltage, latestCurrent, latestPower, latestEnergy,
                     latestFrequency, latestPowerFactor);
     } else {
       lcdNeedsRefresh = true;
-      Serial.printf("Sampel sensor (interval 60 detik): V=%.2f V, I=%.3f A, P=%.2f W, E=%.4f kWh, f=%.2f Hz, PF=%.3f\n",
+      Serial.printf("Sensor (interval 1 detik): V=%.2f V, I=%.3f A, P=%.2f W, E=%.4f kWh, f=%.2f Hz, PF=%.3f\n",
                     latestVoltage, latestCurrent, latestPower, latestEnergy,
                     latestFrequency, latestPowerFactor);
     }
@@ -400,31 +387,36 @@ void loop() {
 
   if (lcdNeedsRefresh) {
     if (menu == 0) {
-      lcd.setCursor(0, 0); lcd.printf("V:%.1f I:%.2f       ", voltage, current);
-      lcd.setCursor(0, 1); lcd.printf("P:%.1f W            ", power);
-      lcd.setCursor(0, 2); lcd.printf("F:%.1fHz PF:%.2f    ", frequency, powerFactor);
+      char line1[17], line2[17];
+      snprintf(line1, sizeof(line1), "V:%.0f I:%.2fA", voltage, current);
+      snprintf(line2, sizeof(line2), "P:%.0fW FD:%.2f", power, powerFactor);
+      writeLcdLine(0, line1);
+      writeLcdLine(1, line2);
     } else if (menu == 1) {
-      lcd.setCursor(0, 0); lcd.printf("E:%.3f kWh         ", energyDisplay);
-      lcd.setCursor(0, 1); lcd.printf("Biaya: Rp %.0f     ", biaya);
-      lcd.setCursor(0, 2); lcd.printf("Meter: %.3f kWh    ", energyRaw);
+      char line1[17], line2[17];
+      snprintf(line1, sizeof(line1), "E:%.3f kWh", energyDisplay);
+      snprintf(line2, sizeof(line2), "Biaya: Rp%.0f", biaya);
+      writeLcdLine(0, line1);
+      writeLcdLine(1, line2);
     } else {
-      lcd.setCursor(0, 0); lcd.printf("Daya %d VA         ", dayaVA[dayaIndex]);
-      lcd.setCursor(0, 1); lcd.print(subsidi[dayaIndex] ? "Subsidi            " : "Non Subsidi        ");
-      lcd.setCursor(0, 2); lcd.printf("Tarif Rp %.2f/kWh  ", tarif[dayaIndex]);
+      char line1[17], line2[17];
+      snprintf(line1, sizeof(line1), "%dVA %s", dayaVA[dayaIndex], subsidi[dayaIndex] ? "SUBSIDI" : "NON-SUB");
+      snprintf(line2, sizeof(line2), "Tarif Rp%.0f/kWh", tarif[dayaIndex]);
+      writeLcdLine(0, line1);
+      writeLcdLine(1, line2);
     }
     lcdNeedsRefresh = false;
   }
-  static unsigned long lastDisplayClock = 0;
-  if (now - lastDisplayClock >= 1000) { displayTimestamp(); lastDisplayClock = now; }
-
-  if (sampleDue && wifiConnected) {
+  const bool telemetryDue = now - lastTelemetrySend >= SEND_INTERVAL_MS;
+  if (telemetryDue && wifiConnected) {
     lastTelemetrySend = now;
     sendTelemetry(voltage, current, power, energyDisplay, frequency, powerFactor);
-  } else if (sampleDue) {
-    Serial.println("Sampel valid, tetapi Wi-Fi offline; pengiriman dilewati.");
+  } else if (telemetryDue) {
+    lastTelemetrySend = now;
+    Serial.println("Sampel lokal valid, tetapi Wi-Fi offline; pengiriman menit ini dilewati.");
   }
 
-  if (sampleDue && wifiConnected && Blynk.connected()) {
+  if (telemetryDue && wifiConnected && Blynk.connected()) {
     Blynk.virtualWrite(V1, voltage);
     Blynk.virtualWrite(V2, current);
     Blynk.virtualWrite(V3, power);

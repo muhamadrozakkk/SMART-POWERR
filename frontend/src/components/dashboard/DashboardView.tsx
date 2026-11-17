@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest, type ApiDeviceStatus, type ApiNotification, type CostSummary, type Reading, type Settings, toDeviceStatus, ApiRequestError } from "@/lib/api";
 import type { EnergyReading, PowerReading } from "@/types/energy";
 import { AlarmStatus } from "@/components/dashboard/AlarmStatus";
@@ -26,6 +26,7 @@ export function DashboardView() {
   const [devices, setDevices] = useState<Array<{ device_id: string; name: string }>>([]);
   const [selectedDevice, setSelectedDevice] = useState("");
   const [error, setError] = useState("");
+  const lastReadingTimestamp = useRef("");
   const load = useCallback(async () => {
     const days = period === "day" ? 1 : period === "week" ? 7 : 30;
     const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -49,6 +50,7 @@ export function DashboardView() {
       if (latestResult.status === "rejected" && !(latestResult.reason instanceof ApiRequestError && latestResult.reason.status === 404 && latestResult.reason.message.toLowerCase().includes("belum ada pembacaan"))) throw latestResult.reason;
       for (const result of [historyResult, costResult, deviceResult, alarmsResult, settingsResult]) if (result.status === "rejected") throw result.reason;
       setLatest(latestResult.status === "fulfilled" ? latestResult.value : null);
+      lastReadingTimestamp.current = latestResult.status === "fulfilled" ? latestResult.value.timestamp : "";
       setHistory(historyResult.status === "fulfilled" ? historyResult.value.data : []);
       setCost(costResult.status === "fulfilled" ? costResult.value : null);
       setDevice(deviceResult.status === "fulfilled" ? deviceResult.value.data : null);
@@ -66,7 +68,26 @@ export function DashboardView() {
       setError("");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Data dashboard gagal dimuat"); }
   }, [period, selectedDevice]);
+  const refreshLatest = useCallback(async () => {
+    const deviceId = selectedDevice || devices[0]?.device_id;
+    if (!deviceId) return;
+    try {
+      const reading = await apiRequest<Reading>(`/api/telemetry/latest?device_id=${encodeURIComponent(deviceId)}`);
+      if (reading.timestamp !== lastReadingTimestamp.current) {
+        lastReadingTimestamp.current = reading.timestamp;
+        setLatest(reading);
+        // A new ESP32 sample also refreshes the chart, cost summary, and device status.
+        void load();
+      }
+    } catch { /* Keep the last successful sample visible during brief network errors. */ }
+  }, [devices, load, selectedDevice]);
   useEffect(() => { const initial = window.setTimeout(() => void load(), 0); const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 60000); const onDeviceAdded = () => void load(); window.addEventListener("spw:device-added", onDeviceAdded); return () => { window.clearTimeout(initial); window.clearInterval(timer); window.removeEventListener("spw:device-added", onDeviceAdded); }; }, [load]);
+  useEffect(() => {
+    const timer = window.setInterval(() => { if (!document.hidden) void refreshLatest(); }, 5000);
+    const onVisibility = () => { if (!document.hidden) void refreshLatest(); };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", onVisibility); };
+  }, [refreshLatest]);
   if (!latest) return <div className="empty-state dashboard-waiting"><strong>{t("Menunggu data dari ESP32")}</strong><span>{error || t(devices.length ? "Perangkat sudah tertaut. Pastikan ESP32 menyala dan mengirim data dengan Device ID serta API Key yang benar." : "Belum ada perangkat yang ditautkan ke akun ini.")} {t("Data akan tampil setelah pembacaan nyata tersimpan.")}</span><button className="secondary-button" onClick={() => void load()}>{t("Periksa lagi")}</button></div>;
   const current = latest;
   const numberLocale = locale === "EN" ? "en-US" : "id-ID";
