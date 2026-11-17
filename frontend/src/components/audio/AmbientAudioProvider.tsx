@@ -9,15 +9,14 @@ const SNOWFALL_PREVIEW_SECONDS = 20;
 
 export function AmbientAudioProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const duckedRef = useRef(false);
 
   const start = useCallback(async () => {
     let audio = audioRef.current;
     if (!audio) {
       audio = new Audio(SNOWFALL_AUDIO_URL);
       audio.loop = true;
-      audio.preload = "none";
-      audio.volume = duckedRef.current ? 0.06 : 0.22;
+      audio.preload = "auto";
+      audio.volume = 0.22;
       audio.addEventListener("timeupdate", () => {
         if (audio && audio.currentTime >= SNOWFALL_PREVIEW_SECONDS) audio.currentTime = 0;
       });
@@ -27,7 +26,6 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const setDucked = useCallback((ducked: boolean) => {
-    duckedRef.current = ducked;
     if (audioRef.current) audioRef.current.volume = ducked ? 0.06 : 0.22;
   }, []);
 
