@@ -15,6 +15,7 @@ aiAssistantRoutes.use(requireAuth, assistantLimiter);
 
 type Language = "ID" | "EN";
 type ChatTurn = { role: "user" | "assistant"; content: string };
+type ChatAttachment = { name: string; mimeType: string; text?: string; dataUrl?: string };
 type Context = {
   device: { id: string; online: boolean; lastSeen: string | null } | null;
   latest: { timestamp: string; voltage: number; current: number; power: number; energy: number; frequency: number; power_factor: number } | null;
@@ -48,6 +49,15 @@ async function loadContext(id: number): Promise<Context> {
   };
 }
 
+function detectLanguage(text: string): Language {
+  const normalized = text.toLocaleLowerCase("id-ID").replace(/[^\p{L}\p{N}\s]/gu, " ");
+  const words = normalized.split(/\s+/).filter(Boolean);
+  const idWords = new Set(["apa", "bagaimana", "gimana", "kenapa", "tolong", "bisa", "saya", "aku", "kamu", "anda", "yang", "dan", "atau", "ini", "itu", "untuk", "dengan", "dari", "enggak", "nggak", "gak", "ga", "tidak", "apakah", "berapa", "dong", "ya", "masih", "buat", "jelaskan", "kok", "sih", "nih", "udah", "belum", "aja", "kayak"]);
+  const enWords = new Set(["hi", "hello", "hey", "what", "how", "why", "please", "can", "could", "would", "you", "your", "the", "and", "or", "this", "that", "for", "with", "from", "not", "is", "are", "do", "does", "did", "tell", "explain", "help", "about", "make", "show", "thanks", "thank", "good", "morning", "evening", "where", "when", "who", "which", "have", "has", "will", "should"]);
+  const score = (set: Set<string>) => words.reduce((total, word) => total + (set.has(word) ? 1 : 0), 0);
+  return score(enWords) > score(idWords) ? "EN" : "ID";
+}
+
 function localAnswer(message: string, language: Language, context: Context) {
   const question = message.toLowerCase();
   if (/^(hai|halo|hello|hi|hey|pagi|siang|sore|malam|apa kabar)[!.?\s]*$/i.test(question)) return language === "EN" ? "Hello! I am PowerMate. I can help with general questions and your SMART POWER energy dashboard. What would you like to talk about?" : "Halo! Aku PowerMate. Aku bisa membantu pertanyaan umum maupun dashboard energi SMART POWER. Kamu ingin membahas apa?";
@@ -70,8 +80,10 @@ function localAnswer(message: string, language: Language, context: Context) {
   return "Saat ini aku sedang dalam mode lokal, jadi pengetahuan umumku terbatas. Aktifkan Gemini API key yang valid di backend agar aku bisa menjawab berbagai pertanyaan umum. Aku tetap bisa menjawab pertanyaan dasar tentang dashboard, perangkat, tarif, dan pembacaan listrik.";
 }
 
-async function generateAnswer(message: string, language: Language, context: Context, history: ChatTurn[]): Promise<{ answer: string; provider: "openai-compatible" | "local" | "local-fallback" }> {
-  if (!env.aiApiKey) return { answer: localAnswer(message, language, context), provider: "local" };
+async function generateAnswer(message: string, language: Language, context: Context, history: ChatTurn[], attachments: ChatAttachment[]): Promise<{ answer: string; provider: "openai-compatible" | "local" | "local-fallback" }> {
+  const fileNotes = attachments.filter((file) => file.text).map((file) => `\n\nIsi file ${file.name}:\n${file.text}`).join("").slice(0, 24_000);
+  const promptText = `${message}${fileNotes}${attachments.filter((file) => file.dataUrl).map((file) => `\n\nGambar terlampir: ${file.name}`).join("")}`;
+  if (!env.aiApiKey) return { answer: localAnswer(message || "Jelaskan file yang saya kirim", language, context), provider: "local" };
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
@@ -83,10 +95,11 @@ async function generateAnswer(message: string, language: Language, context: Cont
       body: JSON.stringify({
         model: env.aiModel,
         temperature: 0.4,
-        max_tokens: 180,
+        max_tokens: 500,
         messages: [
-          { role: "system", content: `Kamu adalah PowerMate, asisten AI umum yang ramah, cerdas, dan komunikatif di SMART POWER WEB. Jawab semua topik yang aman dan sesuai kemampuan pengetahuan umum; jangan membatasi jawaban hanya ke listrik atau aplikasi ini. Pahami ejaan informal, typo, singkatan, dan pertanyaan lanjutan dari riwayat percakapan. Jika pertanyaan berhubungan dengan SMARTPOWER, gunakan konteks akun bila tersedia dan jangan mengarang angka, status, atau pembacaan. Sistem SMARTPOWER memiliki satu sensor di jalur masuk sehingga hanya bisa menjelaskan beban total, bukan identifikasi pemakaian tiap alat. Estimasi biaya bukan tagihan resmi. Untuk fakta live seperti cuaca atau berita, jelaskan keterbatasan jika tidak ada sumber browsing. Waktu server saat ini: ${new Intl.DateTimeFormat("id-ID", { dateStyle: "full", timeStyle: "long", timeZone: "Asia/Jakarta" }).format(new Date())}. Jawab dalam ${language === "EN" ? "English" : "Bahasa Indonesia"}, dengan bahasa natural, akurat, ramah, dan ringkas; gunakan daftar/markdown hanya jika membantu. Konteks akun (hanya dikirim jika pertanyaan tentang SMARTPOWER): ${accountContext}` },
-          ...(history.length ? history.map((turn) => ({ role: turn.role, content: turn.content })) : [{ role: "user", content: message }]),
+          { role: "system", content: `You are PowerMate, a friendly general AI assistant inside SMART POWER WEB. Answer all safe topics within your knowledge; do not limit yourself to electricity or this application. Understand informal spelling, typos, abbreviations, and follow-up questions using the conversation history. For SMART POWER questions, use account context when available and never invent readings or device states. The system has one sensor on the incoming supply, so it measures total load rather than individual appliances. Cost figures are estimates, not official PLN bills. Be transparent about not having live sources for current weather or news. Detect the language of the latest user message and answer entirely in that language; ignore the interface language and the language used earlier in the conversation. A language estimate is ${language === "EN" ? "English" : "Indonesian"}, but the user's actual wording takes priority. Current Jakarta time: ${new Intl.DateTimeFormat("id-ID", { dateStyle: "full", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date())}. Respond naturally, accurately, and concisely; use markdown only when helpful. Account context: ${accountContext}` },
+          ...history.map((turn) => ({ role: turn.role, content: turn.content })),
+          { role: "user", content: attachments.some((file) => file.dataUrl) ? [{ type: "text", text: promptText || "Tolong analisis file yang saya lampirkan." }, ...attachments.filter((file) => file.dataUrl).map((file) => ({ type: "image_url", image_url: { url: file.dataUrl! } }))] : (promptText || "Tolong jelaskan file yang saya lampirkan.") },
         ],
       }),
     });
@@ -103,9 +116,18 @@ async function generateAnswer(message: string, language: Language, context: Cont
 
 aiAssistantRoutes.post("/", async (request, response, next) => {
   try {
-    const body = request.body as { message?: unknown; language?: unknown; history?: unknown };
-    if (typeof body.message !== "string" || !body.message.trim() || body.message.length > 1000) throw new HttpError(400, "Pesan wajib diisi dan maksimal 1000 karakter");
-    const language: Language = body.language === "EN" ? "EN" : "ID";
+    const body = request.body as { message?: unknown; history?: unknown; attachments?: unknown };
+    if (typeof body.message !== "string" || body.message.length > 1000) throw new HttpError(400, "Pesan maksimal 1000 karakter");
+    const attachments: ChatAttachment[] = Array.isArray(body.attachments) ? body.attachments.slice(0, 3).flatMap((value): ChatAttachment[] => {
+      if (!value || typeof value !== "object") return [];
+      const file = value as Record<string, unknown>;
+      if (typeof file.name !== "string" || typeof file.mimeType !== "string") return [];
+      const item: ChatAttachment = { name: file.name.slice(0, 160), mimeType: file.mimeType.slice(0, 100) };
+      if (typeof file.text === "string") item.text = file.text.slice(0, 12_000);
+      if (typeof file.dataUrl === "string" && file.dataUrl.length <= 4_200_000 && /^data:image\/(jpeg|png|webp|gif);base64,/i.test(file.dataUrl)) item.dataUrl = file.dataUrl;
+      return item.text || item.dataUrl ? [item] : [];
+    }) : [];
+    if (!body.message.trim() && !attachments.length) throw new HttpError(400, "Tulis pesan atau lampirkan file terlebih dahulu");
     const history: ChatTurn[] = Array.isArray(body.history) ? body.history.slice(-10).flatMap((item): ChatTurn[] => {
       if (!item || typeof item !== "object") return [];
       const turn = item as { role?: unknown; content?: unknown };
@@ -116,7 +138,9 @@ aiAssistantRoutes.post("/", async (request, response, next) => {
     // Resolve context on the server so every request gets fresh, account-scoped data.
     // Client-provided context is intentionally not trusted for device or meter values.
     const context: Context = await loadContext(userId(request));
-    const result = await generateAnswer(body.message.trim(), language, context, history);
+    const message = body.message.trim();
+    const language = detectLanguage(message || history.filter((turn) => turn.role === "user").at(-1)?.content || "");
+    const result = await generateAnswer(message, language, context, history, attachments);
     response.json({ ...result, context });
   } catch (error) { next(error); }
 });

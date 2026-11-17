@@ -31,6 +31,7 @@ app.set("trust proxy", 1);
 app.use(helmet());
 app.use(cors({ origin: (origin, callback) => { if (!origin || env.corsOrigins.includes(origin)) return callback(null, true); return callback(new Error(`Origin tidak diizinkan oleh CORS: ${origin}`)); }, credentials: true }));
 app.use("/api/user/avatar", express.json({ limit: "3mb" }), avatarRoutes);
+app.use("/api/ai-assistant", express.json({ limit: "6mb" }));
 app.use(express.json({ limit: "32kb" }));
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false, message: { error: "Terlalu banyak percobaan login. Coba lagi nanti." } });

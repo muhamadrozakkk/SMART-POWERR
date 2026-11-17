@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
-type AudioValue = { setDucked: (ducked: boolean) => void };
+type AudioValue = { setDucked: (ducked: boolean) => void; enabled: boolean; setEnabled: (enabled: boolean) => void };
 const AudioContextState = createContext<AudioValue | null>(null);
 const SNOWFALL_AUDIO_URL = "/audio/snowfall.mp3";
 
@@ -10,6 +10,8 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const clickContextRef = useRef<AudioContext | null>(null);
   const duckedRef = useRef(false);
+  const enabledRef = useRef(true);
+  const [enabled, setEnabledState] = useState(true);
 
   const start = useCallback(async () => {
     let audio = audioRef.current;
@@ -18,9 +20,10 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
       audio.loop = true;
       audio.preload = "none";
       audio.volume = duckedRef.current ? 0.06 : 0.22;
+      audio.muted = !enabledRef.current;
       audioRef.current = audio;
     }
-    if (audio.paused) await audio.play();
+    if (enabledRef.current && audio.paused) await audio.play();
   }, []);
 
   const setDucked = useCallback((ducked: boolean) => {
@@ -28,7 +31,21 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
     if (audioRef.current) audioRef.current.volume = ducked ? 0.06 : 0.22;
   }, []);
 
+  const setEnabled = useCallback((value: boolean) => {
+    enabledRef.current = value;
+    setEnabledState(value);
+    try { window.localStorage.setItem("spw_ambient_enabled", value ? "1" : "0"); } catch { /* Ignore blocked storage. */ }
+    if (audioRef.current) audioRef.current.muted = !value;
+    if (value) void start().catch(() => undefined);
+  }, [start]);
+
   useEffect(() => {
+    const preferenceTimer = window.setTimeout(() => {
+      try {
+        const saved = window.localStorage.getItem("spw_ambient_enabled");
+        if (saved === "0") { enabledRef.current = false; setEnabledState(false); }
+      } catch { /* Keep default audio preference. */ }
+    }, 0);
     const startFromGesture = () => {
       void start().catch(() => undefined);
       window.removeEventListener("pointerdown", startFromGesture);
@@ -69,10 +86,11 @@ export function AmbientAudioProvider({ children }: { children: React.ReactNode }
       audioRef.current = null;
       if (clickContextRef.current) void clickContextRef.current.close();
       clickContextRef.current = null;
+      window.clearTimeout(preferenceTimer);
     };
   }, [start]);
 
-  return <AudioContextState.Provider value={{ setDucked }}>{children}</AudioContextState.Provider>;
+  return <AudioContextState.Provider value={{ setDucked, enabled, setEnabled }}>{children}</AudioContextState.Provider>;
 }
 
 export function useAmbientAudio() {
