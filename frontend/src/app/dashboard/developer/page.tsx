@@ -9,12 +9,22 @@ type User = { id: number; name: string; email: string; role: "DEVELOPER" | "USER
 type Hardware = { device_id: string; name: string; is_online: boolean; ts: string | null; voltage: number | null; current: number | null; power: number | null; energy: number | null; frequency: number | null; power_factor: number | null };
 type Log = { id: number; level: string; message: string; created_at: string };
 type Device = { device_id: string; name: string; location: string; last_seen: string | null; user_id: number | null; owner_name?: string | null; owner_email?: string | null; is_online?: boolean };
+const developerTariffs = [
+  { id: "R1_450VA_SUB", label: "R-1/TR 450 VA - subsidi", rate: 415 },
+  { id: "R1_900VA_SUB", label: "R-1/TR 900 VA - subsidi", rate: 605 },
+  { id: "R1_900VA", label: "R-1/TR 900 VA-RTM - nonsubsidi", rate: 1352 },
+  { id: "R1_1300VA", label: "R-1/TR 1.300 VA", rate: 1444.7 },
+  { id: "R1_2200VA", label: "R-1/TR 2.200 VA", rate: 1444.7 },
+  { id: "R2_3500_5500VA", label: "R-2/TR 3.500-5.500 VA", rate: 1699.53 },
+  { id: "R3_6600VA", label: "R-3 6.600 VA ke atas", rate: 1699.53 },
+];
 
 export default function DeveloperDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [hardware, setHardware] = useState<Hardware[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
   const [tariff, setTariff] = useState("1444.70");
+  const [globalTariffId, setGlobalTariffId] = useState("R1_1300VA");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [globalRelay, setGlobalRelay] = useState(true);
@@ -123,7 +133,7 @@ export default function DeveloperDashboard() {
       </article>)}
     </section>
     <section className="panel-card"><div className="panel-heading"><h2>Pengguna &amp; role</h2></div><div className="table-scroll"><table><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Perangkat</th><th>Aksi</th></tr></thead><tbody>{users.map((user) => <tr key={user.id}><td>{user.name}</td><td>{user.email}</td><td><select className="input-control" value={user.role} disabled={busy} onChange={(event) => void changeRole(user, event.target.value as User["role"])}><option value="USER">USER</option><option value="DEVELOPER">DEVELOPER</option></select></td><td>{user.devices.map((item) => item.device_id).join(", ") || "Belum ditautkan"}</td><td>{user.role === "USER" && <button className="danger-button" disabled={busy} onClick={() => void deleteUser(user)}><Trash2 size={15} />Hapus akun</button>}</td></tr>)}</tbody></table></div></section>
-    <section className="two-column"><article className="panel-card"><div className="panel-heading"><h2>Tarif dasar global</h2></div><form onSubmit={saveTariff} className="filters"><label htmlFor="global-tariff">Tarif (Rp/kWh)</label><input id="global-tariff" className="input-control" type="number" min="0" step="0.01" value={tariff} onChange={(event) => setTariff(event.target.value)} /><button className="primary-button" disabled={busy}>Simpan tarif</button></form><small className="muted">Nilai awal mengikuti tabel tarif dalam Permen ESDM 7/2024 untuk golongan rumah tangga nonsubsidi.</small></article>
+    <section className="two-column"><article className="panel-card"><div className="panel-heading"><h2>Tarif dasar global</h2></div><form onSubmit={saveTariff} className="developer-tariff-form"><label className="form-field" htmlFor="developer-tariff-group"><span>Daya terpasang &amp; golongan subsidi</span><select id="developer-tariff-group" className="input-control" value={globalTariffId} onChange={(event) => { const option = developerTariffs.find((item) => item.id === event.target.value) ?? developerTariffs[3]; setGlobalTariffId(option.id); setTariff(String(option.rate)); }}><optgroup label="Rumah tangga bersubsidi"><option value="R1_450VA_SUB">R-1/TR 450 VA subsidi - Rp 415/kWh</option><option value="R1_900VA_SUB">R-1/TR 900 VA subsidi - Rp 605/kWh</option></optgroup>{developerTariffs.slice(2).map((option) => <option key={option.id} value={option.id}>{option.label} - Rp {option.rate.toLocaleString("id-ID")}/kWh</option>)}</select></label><label className="form-field" htmlFor="global-tariff"><span>Tarif dasar (Rp/kWh)</span><input id="global-tariff" className="input-control" type="number" min="0" step="0.01" value={tariff} onChange={(event) => setTariff(event.target.value)} /></label><button className="primary-button" disabled={busy}>Simpan tarif</button></form><small className="muted">Tarif global menjadi nilai dasar sistem; tarif khusus tiap pengguna tetap mengikuti pilihan pada pengaturannya.</small></article>
       <article className="panel-card"><div className="panel-heading"><h2>Log sistem terbaru</h2></div>{logs.length ? logs.slice(0, 12).map((log) => <p key={log.id} style={{ borderBottom: "1px solid #1d456e", padding: "8px 0", margin: 0 }}><strong>{log.level.toUpperCase()}</strong> · {log.message}<small className="muted"> · {formatWibDateTime(log.created_at)}</small></p>) : <p className="muted">Belum ada log sistem yang tercatat.</p>}</article></section>
     <p className="muted">Kontrol relay fisik dan buzzer perlu didukung firmware ESP32 serta protokol command/polling; endpoint telemetry yang ada belum mengirim perintah ke perangkat.</p>
   </main>;

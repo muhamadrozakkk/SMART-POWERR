@@ -313,10 +313,32 @@ html, body { width: 100%; min-width: 0; overflow-x: hidden; overflow-y: auto; }
 .devices-empty { min-height: 170px; }
 .dashboard-waiting { min-height: 205px; padding: 28px; border: 1px dashed #2a5279; border-radius: 12px; background: #071d38aa; }
 .dashboard-waiting > span { max-width: 720px; line-height: 1.65; }
+.user-settings-note { margin: 0 0 18px; line-height: 1.55; }
+.user-controls-card .settings-status { margin: 0 0 15px; line-height: 1.5; }
+.user-controls-help { max-width: 480px; margin: 10px 0 0; font-size: 11px; line-height: 1.55; }
+.developer-tariff-form { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(160px, .8fr) auto; gap: 12px; align-items: end; margin: 15px 0; }
+.developer-tariff-form .form-field { display: flex; flex-direction: column; gap: 7px; color: #dce7f3; font-size: 12px; }
+.developer-tariff-form .input-control { width: 100%; min-height: 41px; }
+.energy-recommendations { display: grid; gap: 15px; min-width: 0; padding: 20px; border: 1px solid #17658a; border-radius: 13px; background: linear-gradient(120deg, #0a2c4c, #0b2039 68%, #152c40); box-shadow: 0 14px 35px #0002; }
+.energy-recommendations-heading { display: flex; align-items: center; gap: 12px; }
+.energy-recommendations-heading > span { display: grid; place-items: center; width: 42px; height: 42px; flex: 0 0 auto; color: #ffd16b; border: 1px solid #9d752c; border-radius: 12px; background: #78561444; }
+.energy-recommendations-heading small { color: #f7bf4f; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+.energy-recommendations-heading h2 { margin: 4px 0 0; font-size: 18px; }
+.energy-recommendations-intro { margin: 0; color: #b4c8dc; font-size: 12px; }
+.energy-recommendation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 11px; }
+.energy-recommendation-grid article { display: flex; align-items: flex-start; gap: 10px; min-width: 0; padding: 13px; border: 1px solid #285477; border-radius: 10px; background: #0a2948aa; }
+.energy-recommendation-grid article > svg { flex: 0 0 auto; margin-top: 2px; color: #5fbaff; }
+.energy-recommendation-grid article strong, .energy-recommendation-grid article span { display: block; }
+.energy-recommendation-grid article strong { margin-bottom: 5px; color: #e6f1fb; font-size: 12px; }
+.energy-recommendation-grid article span { color: #a9bfd5; font-size: 11px; line-height: 1.5; }
+.energy-recommendations-note { color: #95abc2; font-size: 10px; line-height: 1.5; }
 @media (max-width: 900px) {
   .device-registration-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .device-registration-form > button { grid-column: 1 / -1; justify-self: start; }
   .registered-device-list { grid-template-columns: 1fr; }
+  .developer-tariff-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .developer-tariff-form .primary-button { grid-column: 1 / -1; justify-self: start; }
+  .energy-recommendation-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .device-registration-form, .user-controls-form { grid-template-columns: 1fr; gap: 13px; }
@@ -326,6 +348,9 @@ html, body { width: 100%; min-width: 0; overflow-x: hidden; overflow-y: auto; }
   .device-credential-row code { font-size: 10px; }
   .device-credentials { padding: 11px; }
   .dashboard-waiting { padding: 20px 14px; }
+  .developer-tariff-form { grid-template-columns: 1fr; }
+  .developer-tariff-form .primary-button { grid-column: auto; width: 100%; }
+  .energy-recommendations { padding: 16px; }
 }
 
 /* SmartPower dashboard refresh */

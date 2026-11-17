@@ -1,5 +1,7 @@
 export const PLN_TARIFFS = {
-  R1_900VA: { label: "R-1/TR 900 VA-RTM", tariff_per_kwh: 1352 },
+  R1_450VA_SUB: { label: "R-1/TR 450 VA subsidi", tariff_per_kwh: 415 },
+  R1_900VA_SUB: { label: "R-1/TR 900 VA subsidi", tariff_per_kwh: 605 },
+  R1_900VA: { label: "R-1/TR 900 VA-RTM (nonsubsidi)", tariff_per_kwh: 1352 },
   R1_1300VA: { label: "R-1/TR 1.300 VA", tariff_per_kwh: 1444.7 },
   R1_2200VA: { label: "R-1/TR 2.200 VA", tariff_per_kwh: 1444.7 },
   R2_3500_5500VA: { label: "R-2/TR 3.500-5.500 VA", tariff_per_kwh: 1699.53 },
